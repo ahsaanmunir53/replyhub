@@ -2080,5 +2080,9 @@
   "setup.whatsapp_note": "Apna business number hamein bhejein, hum jor denge. Naya number lein, ya WhatsApp Business wala.",
   "setup.store": "Roz ki report ke liye apna website store jorein",
   "setup.try": "Web chat mein apna assistant aazmayein",
-  "setup.done": "Ho gaya"
+  "setup.done": "Ho gaya",
+  "reply.trial_limit": "Aap ke message ka shukriya. Team jaldi aap ko yahin jawab degi.",
+  "signup.agree": "Account bana kar aap terms aur privacy policy se ittefaq karte hain.",
+  "signup.terms": "Terms",
+  "signup.privacy": "Privacy policy"
 }

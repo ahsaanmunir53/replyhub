@@ -2080,5 +2080,9 @@
   "setup.whatsapp_note": "Send us your business number and we will connect it. Use a new number, or one on WhatsApp Business.",
   "setup.store": "Connect your website store for daily reports",
   "setup.try": "Try your assistant in the web chat",
-  "setup.done": "Done"
+  "setup.done": "Done",
+  "reply.trial_limit": "Thanks for your message. The team will reply to you here soon.",
+  "signup.agree": "By creating an account, you agree to the terms and the privacy policy.",
+  "signup.terms": "Terms",
+  "signup.privacy": "Privacy policy"
 }
