@@ -67,6 +67,7 @@ from chatfront.shield.routes import router as shield_router
 from chatfront.shield.scam_routes import router as scams_router
 from chatfront.sim.routes import router as busy_day_router
 from chatfront.stock.routes import router as stock_router
+from chatfront.store.routes import router as store_router
 
 _log = logging.getLogger(__name__)
 
@@ -188,6 +189,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(imports_router)
     app.include_router(size_charts_router)
     app.include_router(rules_router)
+    app.include_router(store_router)
     app.include_router(team_router)
     app.include_router(books_router)
     app.include_router(crm_router)

@@ -352,6 +352,8 @@ async def test_cron(app: tuple[httpx.AsyncClient, Services], seeded: Database) -
     response = await client.post("/internal/cron", headers={"X-Cron-Secret": "test-cron-secret"})
     assert response.json() == {
         "enqueued": [
+            "store-sync",
+            "store-reports",
             "catalog-sync",
             "requeue-stale",
             "remove-expired-shops",

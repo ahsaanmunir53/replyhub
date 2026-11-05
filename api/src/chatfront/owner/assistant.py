@@ -66,7 +66,7 @@ from chatfront.jobs.queue import enqueue
 from chatfront.media import service as media_service
 from chatfront.media.models import Media
 from chatfront.media.storage import Storage
-from chatfront.owner import actions
+from chatfront.owner import actions, subscription
 from chatfront.owner.cards import change_list, confirm_card, product_summary
 from chatfront.owner.changes import resolve_changes, typed_price_change
 from chatfront.owner.models import ActionStatus, PendingAction
@@ -79,6 +79,7 @@ from chatfront.shield.phishing import link_line
 from chatfront.stock import changes as stock_changes
 from chatfront.stock import count, panel, profit, restock
 from chatfront.stock import ops as stock_ops
+from chatfront.store import service as store
 from chatfront.templates import get_template
 
 # A tap on a button another module put in the owner's chat (giving a chat back to the agent,
@@ -125,6 +126,13 @@ class OwnerAssistant:
         self.followups = tuple(followups)
 
     async def respond(self, turn: Turn) -> list[Outbound]:
+        features = subscription.features_of(turn.tenant, commerce=self.settings.commerce)
+        if subscription.Feature.OWNER_WHATSAPP not in features:
+            return [OutText(t("plan.no_owner_whatsapp", turn.lang))]
+        if turn.message.kind == Kind.TEXT and (asked := store.asks(turn.message.body)):
+            text = await store.answer(self, turn.tenant, asked, turn.lang)
+            if text is not None:
+                return [OutText(text)]
         button = (turn.message.payload or {}).get("button_id")
         if turn.staff_id is not None and button:
             for handler in self.buttons:

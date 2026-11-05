@@ -417,3 +417,14 @@ curl -X POST https://<api>/internal/plan -H "X-Cron-Secret: $CRON_SECRET" \
 ```
 
 With `COMMERCE=true` (Chatfront) there are no plans: every feature is on.
+
+## Website store and the daily report (Pro)
+
+The owner connects a Shopify or WooCommerce store in the console, under Website store, with a
+read-only key: a Shopify custom app's Admin API token with only `read_orders`, or a
+WooCommerce REST key with Read permission (plus its consumer secret). The key is sealed with
+`SECRET_KEY` and never shown again; only https store addresses on the public internet are
+read. Every 15 minutes the orders changed since the last read are fetched (number, time,
+total, status, cash on delivery, sent out; no customer details). At the hour the owner picks,
+the day's report goes to the owner's WhatsApp, and the owner can send "report", "aaj ka
+scene" or "pending cod" at any time.

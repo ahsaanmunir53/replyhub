@@ -76,6 +76,7 @@ from chatfront.sim.runner import take_turn as sim_turn
 from chatfront.stock import expiry, panel
 from chatfront.stock.chat import stock_button
 from chatfront.stock.notices import NOTICE_JOB, notice_job
+from chatfront.store import service as store
 
 REQUEUE_STALE_JOB = "jobs.requeue_stale"
 
@@ -202,6 +203,15 @@ def build_registries() -> Registries:
     delivery.jobs |= {picking.DAILY_JOB: picking.daily_job, picking.SEND_JOB: picking.send_job}
     delivery.periodic.append(Periodic("pick-lists", picking.EVERY, picking.DAILY_JOB))
     registries.approvals[packing.KIND] = packing.APPROVAL
+    for kind, handler in (
+        (store.SYNC_ALL_JOB, store.sync_all_job),
+        (store.SYNC_JOB, store.sync_job),
+        (store.REPORTS_JOB, store.reports_job),
+        (store.REPORT_JOB, store.report_job),
+    ):
+        registries.jobs.register(kind)(handler)
+    for task in store.periodic():
+        registries.cron.add(task)
     registries.jobs.register(REPLY_JOB)(handle_reply)
     registries.jobs.register(COMMENT_JOB)(reply_to_comment)
     registries.jobs.register(meta.SYNC_JOB)(meta.sync_job)

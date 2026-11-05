@@ -86,6 +86,7 @@ from chatfront.shield.models import (
 )
 from chatfront.sim.models import SimChat, SimRun
 from chatfront.stock.models import BatchAllocation, OwnerNotice, StockBatch
+from chatfront.store.models import StoreConnection, StoreOrder
 
 __all__ = [
     "A2ABuyerPolicy",
@@ -160,6 +161,8 @@ __all__ = [
     "StaffPayment",
     "StockBatch",
     "StockMovement",
+    "StoreConnection",
+    "StoreOrder",
     "Tenant",
     "TenantModule",
     "UdhaarAccount",
