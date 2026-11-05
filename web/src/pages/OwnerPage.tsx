@@ -354,6 +354,8 @@ function Console({
   const [panel, setPanel] = useState<"chat" | "products">("chat");
   const current = useCurrentSection();
   const can = (right: string) => me.rights.includes(right);
+  // ReplyHub plans: a feature outside the business's plan stays hidden (all on in Chatfront).
+  const has = (feature: string) => !me.features || me.features.includes(feature);
   const payments = usePayments(token, can("payments"));
   const orders = useOrders(token, can("orders"));
   const books = useBooks(token, can("books"));
@@ -413,7 +415,7 @@ function Console({
     {
       id: "inbox",
       label: "side.inbox",
-      show: can("chats"),
+      show: can("chats") && has("inbox"),
       children: <InboxPanel me={me} token={token} />,
     },
     {
@@ -594,7 +596,7 @@ function Console({
             <PostsPanel token={token} products={products ?? []} />
           )}
           {can("catalog") && <CatalogSyncPanel token={token} />}
-          {can("chats") && (
+          {can("chats") && has("broadcasts") && (
             <BroadcastsPanel me={me} token={token} products={products ?? []} />
           )}
           {can("orders") && <LeadsPanel me={me} token={token} />}
@@ -639,7 +641,12 @@ function Console({
       show: true,
       children: (
         <>
-          {can("team") && <TeamPanel token={token} onSignedOut={onSignOut} />}
+          {me.plan && !COMMERCE && (
+            <p className="aside plan-line">
+              {t("plan.current", { plan: t(`plan.${me.plan}` as Key) })}
+            </p>
+          )}
+          {can("team") && has("team") && <TeamPanel token={token} onSignedOut={onSignOut} />}
           {(can("catalog") || can("orders") || can("team")) && (
             <NetworkCommercePanel
               me={me}

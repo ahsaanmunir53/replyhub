@@ -230,6 +230,8 @@ export type OwnerMe = {
   role: string;
   rights: string[];
   is_platform?: boolean;
+  plan?: "basic" | "pro" | "business"; // ReplyHub: what the business pays for
+  features?: string[];
 };
 export type OwnerProduct = {
   id: string;
