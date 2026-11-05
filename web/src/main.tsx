@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { WakeBar } from "./components/WakeBar";
-import { BASE_PATH } from "./config";
+import { BASE_PATH, COMMERCE } from "./config";
 import { LangProvider } from "./lang";
 import { ChatPage } from "./pages/ChatPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
@@ -42,18 +42,25 @@ createRoot(root).render(
         <BrowserRouter basename={BASE_PATH.replace(/\/$/, "")}>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/s/:slug" element={<ShopPage />} />
+            <Route
+              path="/s/:slug"
+              element={COMMERCE ? <ShopPage /> : <Navigate to="chat" replace />}
+            />
             <Route path="/s/:slug/chat" element={<ChatPage />} />
-            <Route path="/s/:slug/checkout" element={<CheckoutPage />} />
-            <Route path="/s/:slug/g/:code" element={<GroupPage />} />
+            {COMMERCE && (
+              <>
+                <Route path="/s/:slug/checkout" element={<CheckoutPage />} />
+                <Route path="/s/:slug/g/:code" element={<GroupPage />} />
+                <Route path="/r/:code?" element={<ReceiptPage />} />
+                <Route path="/t/:code" element={<TrackPage />} />
+              </>
+            )}
             <Route path="/s/:slug/trust" element={<TrustPage />} />
             <Route path="/s/:slug/review/:code" element={<ReviewPage />} />
             <Route path="/start" element={<StartPage />} />
             <Route path="/owner" element={<OwnerPage />} />
             <Route path="/dashboard" element={<Navigate to="/owner" replace />} />
-            <Route path="/r/:code?" element={<ReceiptPage />} />
             <Route path="/passport/:code" element={<PassportPage />} />
-            <Route path="/t/:code" element={<TrackPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <RouteEffects />

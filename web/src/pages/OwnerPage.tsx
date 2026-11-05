@@ -1,6 +1,7 @@
 // The owner console: the owner's own assistant on the left, the shop's products on the right.
 // Products are added and changed through the chat (a photo and a price, "kurta is now 2900"),
 // and only after the owner taps Confirm; the list shows the result.
+import { COMMERCE } from "../config";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -536,7 +537,7 @@ function Console({
     {
       id: "money",
       label: "side.money",
-      show: can("payments") || can("books"),
+      show: COMMERCE && (can("payments") || can("books")),
       children: (
         <>
           {can("payments") && (
