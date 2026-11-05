@@ -164,7 +164,7 @@ async def find_products(ctx: AgentContext, params: FindProducts) -> dict[str, An
     found = search(await items_of(ctx), params.query, limit=MAX_RESULTS)
     shown = sum(isinstance(c, OutImage) for c in ctx.cards)
     for f in found[: max(PICTURES_PER_TURN - shown, 0)]:  # the products' pictures go first
-        picture = browse.card(ctx.api_url, ctx.tenant, f.item, ctx.lang)
+        picture = browse.card(ctx.api_url, ctx.tenant, f.item, ctx.lang, "orders" in ctx.modules)
         if isinstance(picture, OutImage):
             ctx.cards.append(picture)
     return {"ok": True, "products": [_describe(ctx, f.item) for f in found]}
@@ -840,6 +840,7 @@ def order_tools() -> tuple[list[Tool], list[Tool]]:
             change_order,
             "orders",
         ),
-        Tool("hand_over", "Hand the chat to the shop owner.", HandOver, hand_over, "orders"),
+        # Under catalog so it stays when the shop sells nothing in the chat (commerce off).
+        Tool("hand_over", "Hand the chat to the shop owner.", HandOver, hand_over, "catalog"),
     ]
     return catalog, order

@@ -117,7 +117,7 @@ def photo_url(api_url: str, tenant: Tenant, item: CatalogItem) -> str | None:
     return api_url.rstrip("/") + demo_art.photo_path(tenant.slug, product.code)
 
 
-def card(api_url: str, tenant: Tenant, item: CatalogItem, lang: str) -> Outbound:
+def card(api_url: str, tenant: Tenant, item: CatalogItem, lang: str, sell: bool = True) -> Outbound:
     """One product: picture (when it has one), name, price, its colours or sizes, its code."""
     product = item.product
     prices: list[int] = sorted({item.price_of(v) for v in item.variants if v.active})
@@ -140,7 +140,7 @@ def card(api_url: str, tenant: Tenant, item: CatalogItem, lang: str) -> Outbound
     if not url:
         return OutText(caption)
     buy = (Button(BUY_PREFIX + product.code, t("browse.order_button", lang)),)
-    return OutImage(url, caption, product.name, buy if item.in_stock else ())
+    return OutImage(url, caption, product.name, buy if sell and item.in_stock else ())
 
 
 def _pictured(history: Sequence[Message]) -> set[str]:
@@ -160,6 +160,7 @@ def mentioned(
     lang: str,
     history: Sequence[Message] = (),
     room: int = 3,
+    sell: bool = True,
 ) -> list[OutImage]:
     """Pictures of the products a reply names by code, in the order it names them, so a
     list written by the assistant arrives with its pictures. A product the chat already
@@ -174,18 +175,24 @@ def mentioned(
     for _, item in sorted(found, key=lambda pair: pair[0]):
         if len(out) >= room:
             break
-        picture = card(api_url, tenant, item, lang)
+        picture = card(api_url, tenant, item, lang, sell)
         if isinstance(picture, OutImage):
             out.append(picture)
     return out
 
 
 def category_cards(
-    api_url: str, tenant: Tenant, items: Sequence[CatalogItem], category: str, lang: str
+    api_url: str,
+    tenant: Tenant,
+    items: Sequence[CatalogItem],
+    category: str,
+    lang: str,
+    sell: bool = True,
 ) -> list[Outbound]:
     chosen = [i for i in items if _category(i) == category.casefold()][:CARDS_AT_MOST]
     if not chosen:
         return categories(items, lang)
-    out = [card(api_url, tenant, item, lang) for item in chosen]
-    out.append(OutText(t("browse.order_hint", lang, code=chosen[0].product.code)))
+    out = [card(api_url, tenant, item, lang, sell) for item in chosen]
+    if sell:
+        out.append(OutText(t("browse.order_hint", lang, code=chosen[0].product.code)))
     return out

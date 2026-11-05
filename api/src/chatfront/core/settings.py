@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     # Channels whose incoming messages are ignored for now (no replies): "instagram",
     # "messenger" or "whatsapp", separated by ",". Empty answers on every channel.
     paused_channels: str = ""
+    # Off: the assistant only answers and hands over; no cart, checkout or payment checks.
+    commerce: bool = False
     # Shops whose owner console link is printed in the logs at start (12 hours), for hosts
     # without a shell: slugs separated by ",". Remove once signed in.
     owner_link_shops: str = ""

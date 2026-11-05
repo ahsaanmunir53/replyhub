@@ -68,6 +68,16 @@ def test_categories_then_cards() -> None:
     assert isinstance(browse.category_cards("", SHOP, items, "hats", "en")[0], OutList)
 
 
+def test_without_selling_the_cards_have_no_order_button_or_hint() -> None:
+    """ReplyHub answers but does not sell in the chat (COMMERCE off): the card shows the
+    product, with no Order button and no line on how to order."""
+    items = [item("Printed lawn", "suits", "Rust")]
+    [only] = browse.category_cards("https://api.test", SHOP, items, "suits", "en", sell=False)
+    assert isinstance(only, OutImage)
+    assert only.buttons == ()
+    assert "Code: PRI" in only.caption
+
+
 def test_a_product_without_a_picture_is_a_text_card() -> None:
     own = item("Own suit", "suits", "Rust", source="console")
     assert isinstance(browse.card("https://api.test", SHOP, own, "en"), OutText)

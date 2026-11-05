@@ -597,3 +597,20 @@ async def test_the_owner_hears_on_whatsapp_and_gives_the_chat_back_with_a_tap(
         handover = await session.scalar(select(Handover))
     assert handover is not None
     assert handover.status == HandoverStatus.RESOLVED
+
+
+async def test_without_selling_the_model_gets_no_cart_or_checkout(
+    app: tuple[Client, Services], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ReplyHub (COMMERCE off): the assistant can look up products and hand the chat over,
+    but it is never given the cart, checkout or payment tools."""
+    client, services = app
+    monkeypatch.setattr(services.settings, "commerce", False)
+    mock = use(services, agent("kurta hai", content="Ji, linen kurta hai."))
+    guest, token = await customer(client)
+    reply = last(await say(client, services, SHOP, guest, "kurta hai?", token=token))
+    assert reply["body"] == "Ji, linen kurta hai."
+    call = next(r for r in mock.requests if r.prompt and r.prompt.startswith("order_agent"))
+    names = {spec["function"]["name"] for spec in call.tools}
+    assert {"find_products", "hand_over"} <= names
+    assert not names & {"add_to_cart", "view_cart", "checkout", "make_offer", "cancel_order"}

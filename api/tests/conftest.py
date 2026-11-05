@@ -28,6 +28,8 @@ os.environ.update(
         "CRON_SECRET": "test-cron-secret",
         "PUBLIC_BASE_URL": "http://testserver",
         "PUBLIC_RATE_LIMIT_PER_MINUTE": "1000",
+        # The suite covers the selling features too; the product runs with them off.
+        "COMMERCE": "true",
     }
 )
 

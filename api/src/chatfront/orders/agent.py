@@ -106,6 +106,9 @@ _INJECTION_NOTE = (
 )
 
 
+# The modules that sell in the chat; off when the product only answers (settings.commerce).
+COMMERCE_MODULES = frozenset({"orders", "payments"})
+
 _BUY_NOTE = (
     "The customer tapped Order on the product card with code {}. Help them order it: ask "
     "for the size or colour if it has several, then add it to the cart."
@@ -190,7 +193,13 @@ class OrderAgent:
         pictures = [c for c in ctx.cards if isinstance(c, OutImage)]  # products first
         if checked:  # a list the assistant wrote itself still comes with its pictures
             named = browse.mentioned(
-                ctx.api_url, turn.tenant, ctx.items, checked, turn.lang, history=turn.history
+                ctx.api_url,
+                turn.tenant,
+                ctx.items,
+                checked,
+                turn.lang,
+                history=turn.history,
+                sell="orders" in ctx.modules,
             )
             titles = {p.title for p in pictures}
             room = max(PICTURES_PER_TURN - len(pictures), 0)
@@ -212,7 +221,8 @@ class OrderAgent:
         if category is None:
             return browse.categories(items, turn.lang)
         api_url = self.services.settings.public_base_url
-        return browse.category_cards(api_url, turn.tenant, items, category, turn.lang)
+        sell = self.services.settings.commerce
+        return browse.category_cards(api_url, turn.tenant, items, category, turn.lang, sell)
 
     # -- the model's part -----------------------------------------------------------------
 
@@ -221,6 +231,8 @@ class OrderAgent:
         async with services.db.tenant(tenant.id) as session:
             items = await load_items(session)
             modules = await enabled_modules(session, tenant.id)
+            if not services.settings.commerce:
+                modules -= COMMERCE_MODULES
             trusted = await buyers.trusted(session, turn.conversation.customer_id)
             shown = await session.scalars(select(Coupon).where(Coupon.show_on_page.is_(True)))
             notes = [
