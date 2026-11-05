@@ -110,8 +110,11 @@ jobs:
             -c "CREATE DATABASE chatfront_e2e OWNER chatfront_owner"
       - run: uv sync --frozen
         working-directory: api
+      # The browser tests walk the selling flows too, so they run with selling on.
       - run: npm ci && npm run build && npx playwright install --with-deps chromium
         working-directory: web
+        env:
+          VITE_COMMERCE: "true"
       - name: Browser tests
         run: npm run e2e
         working-directory: web

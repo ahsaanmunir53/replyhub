@@ -16,6 +16,7 @@ import { ReviewPage } from "./pages/ReviewPage";
 import { TrackPage } from "./pages/TrackPage";
 import { OwnerPage } from "./pages/OwnerPage";
 import { ShopPage } from "./pages/ShopPage";
+import { SignupPage } from "./pages/SignupPage";
 import { StartPage } from "./pages/StartPage";
 import { ServerProvider } from "./server";
 import "./styles.css";
@@ -41,7 +42,8 @@ createRoot(root).render(
       <ServerProvider>
         <BrowserRouter basename={BASE_PATH.replace(/\/$/, "")}>
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={COMMERCE ? <HomePage /> : <SignupPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route
               path="/s/:slug"
               element={COMMERCE ? <ShopPage /> : <Navigate to="chat" replace />}

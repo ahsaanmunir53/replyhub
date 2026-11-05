@@ -41,6 +41,8 @@ export default defineConfig({
       PUBLIC_RATE_LIMIT_PER_MINUTE: "1000",
       // Simulated customers (feature 110) arrive and type quickly in tests.
       SIM_PACE_SECONDS: "0.2",
+      // The browser tests walk the selling flows too (Chatfront), so selling is on here.
+      COMMERCE: "true",
     },
   },
 });

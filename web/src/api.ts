@@ -110,6 +110,25 @@ export type SizeChart = {
 };
 export type SizeCharts = { charts: SizeChart[]; usual: SizeChart[]; categories: string[] };
 
+/** Signing a business up (ReplyHub). */
+export type SignupOption = { id: string; name: string };
+export type SignupOptions = {
+  open: boolean;
+  business_types: SignupOption[];
+  countries: SignupOption[];
+};
+export type SignupIn = {
+  business_name: string;
+  business_type: string;
+  country: string;
+  city: string;
+  owner_name: string;
+  email: string;
+  whatsapp: string;
+  lang: string;
+};
+export type SignedUp = { slug: string; token: string; console_url: string };
+
 /** The business's website store (ReplyHub, Pro plan). The key is never sent back. */
 export type StoreToday = {
   orders: number;
@@ -260,6 +279,7 @@ export type OwnerMe = {
   is_platform?: boolean;
   plan?: "basic" | "pro" | "business"; // ReplyHub: what the business pays for
   features?: string[];
+  whatsapp_connected?: boolean; // ReplyHub onboarding
 };
 export type OwnerProduct = {
   id: string;
@@ -1930,6 +1950,9 @@ export const api = {
       headers: bearer(token),
       body: JSON.stringify({ lines }),
     }),
+  signupOptions: () => call<SignupOptions>("/api/signup"),
+  signup: (body: SignupIn) =>
+    call<SignedUp>("/api/signup", { method: "POST", body: JSON.stringify(body) }),
   store: (token: string) => call<Store>("/api/owner/store", { headers: bearer(token) }),
   saveStore: (token: string, body: StoreIn) =>
     call<Store>("/api/owner/store", {

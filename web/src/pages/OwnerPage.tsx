@@ -46,6 +46,7 @@ import { ShelfCountPanel } from "../components/ShelfCount";
 import { ShelfCameraPanel } from "../components/ShelfCamera";
 import { NetworkCommercePanel } from "../components/NetworkCommerce";
 import { RulesPanel } from "../components/Rules";
+import { SetupPanel } from "../components/Setup";
 import { StorePanel } from "../components/StoreLink";
 import { SizeChartsPanel } from "../components/SizeCharts";
 import { WaitingPanel } from "../components/Waiting";
@@ -398,6 +399,7 @@ function Console({
           {me.is_demo && can("orders") && (
             <BusyDayPanel token={token} canStart={can("settings")} />
           )}
+          {!COMMERCE && <SetupPanel me={me} token={token} />}
           <Approvals
             token={token}
             list={approvals.list}

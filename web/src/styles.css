@@ -7202,3 +7202,23 @@ button {
 .store-error {
   color: var(--danger, #b42318);
 }
+
+/* ReplyHub sign-up and getting started. */
+.signup {
+  max-width: 560px;
+  margin: 0 auto;
+}
+.signup-form {
+  margin-top: 16px;
+}
+.setup-steps {
+  margin: 8px 0 0;
+  padding-left: 22px;
+}
+.setup-steps li {
+  margin: 6px 0;
+}
+.setup-steps li.done a {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
