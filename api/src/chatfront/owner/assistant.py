@@ -7,6 +7,7 @@ staff member gets only what their role allows (42).
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
@@ -57,7 +58,7 @@ from chatfront.core.countries import get_pack, shop_money
 from chatfront.core.db import Database
 from chatfront.core.errors import AppError
 from chatfront.core.i18n import t
-from chatfront.core.models import Tenant
+from chatfront.core.models import Staff, Tenant
 from chatfront.core.settings import Settings
 from chatfront.delivery import packing, picking
 from chatfront.insights.ask import DataAsk, needs, typed_ask
@@ -71,6 +72,7 @@ from chatfront.owner.cards import change_list, confirm_card, product_summary
 from chatfront.owner.changes import resolve_changes, typed_price_change
 from chatfront.owner.models import ActionStatus, PendingAction
 from chatfront.owner.rights import Can, staff_rights
+from chatfront.owner.sessions import console_link, issue
 from chatfront.owner.types import Problem
 from chatfront.shield import guardian, phishing
 from chatfront.shield.models import ScamKind
@@ -102,6 +104,9 @@ def _rights_for(action: PendingAction) -> set[Can]:
     return {_RIGHT[action.kind]}
 
 
+_SIGN_IN = re.compile(r"^\s*(login|log in|sign in|console|panel|dashboard)\s*[.!?]?\s*$", re.I)
+
+
 def refuse(turn: Turn) -> list[Outbound]:
     return [OutText(t("owner.not_allowed", turn.lang))]
 
@@ -125,7 +130,29 @@ class OwnerAssistant:
         self.buttons = tuple(buttons)
         self.followups = tuple(followups)
 
+    async def _sign_in_link(self, turn: Turn) -> list[Outbound]:
+        """A fresh console link, sent only to a staff member's own linked number."""
+        if turn.staff_id is None:
+            return refuse(turn)
+        async with self.db.tenant(turn.tenant.id) as session:
+            staff = await session.get(Staff, turn.staff_id)
+        if staff is None or not staff.active:
+            return refuse(turn)
+        token = issue(
+            staff.id,
+            staff.tenant_id,
+            self.settings.secret_key.get_secret_value(),
+            session_version=staff.session_version,
+        )
+        return [
+            OutText(
+                t("owner.sign_in_link", turn.lang, link=console_link(self.settings.web_url, token))
+            )
+        ]
+
     async def respond(self, turn: Turn) -> list[Outbound]:
+        if turn.message.kind == Kind.TEXT and _SIGN_IN.match(turn.message.body or ""):
+            return await self._sign_in_link(turn)  # on every plan: it is how owners sign in
         features = subscription.features_of(turn.tenant, commerce=self.settings.commerce)
         if subscription.Feature.OWNER_WHATSAPP not in features:
             return [OutText(t("plan.no_owner_whatsapp", turn.lang))]

@@ -24,6 +24,8 @@ from chatfront.channels.handover import (
 )
 from chatfront.channels.language import staff_language
 from chatfront.channels.models import (
+    Channel,
+    ChannelAccount,
     Conversation,
     Direction,
     Message,
@@ -147,6 +149,7 @@ class Me(BaseModel):
     is_platform: bool = False  # Chatfront's own staff, who review fraud reports (feature 37)
     plan: str = Plan.BUSINESS.value  # ReplyHub: what the business pays for
     features: list[str] = Field(default_factory=list)
+    whatsapp_connected: bool = False  # ReplyHub onboarding: the business's number is in
 
 
 class OwnerVariant(BaseModel):
@@ -191,6 +194,11 @@ async def me(session: StaffDep, services: ServicesDep) -> Me:
     async with services.db.tenant(session.tenant_id) as db:
         tenant = await db.get(Tenant, session.tenant_id)
         staff = await db.get(Staff, session.staff_id)
+        whatsapp = await db.scalar(
+            select(ChannelAccount.id).where(
+                ChannelAccount.channel == Channel.WHATSAPP, ChannelAccount.active.is_(True)
+            )
+        )
     if tenant is None or staff is None or not staff.active:
         raise NotSignedIn
     return Me(
@@ -209,6 +217,7 @@ async def me(session: StaffDep, services: ServicesDep) -> Me:
         is_platform=tenant.is_platform,
         plan=plan_of(tenant).value,
         features=sorted(features_of(tenant, commerce=services.settings.commerce)),
+        whatsapp_connected=whatsapp is not None,
     )
 
 

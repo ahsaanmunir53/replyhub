@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import mimetypes
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import Response
@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 
 from chatfront.audit.service import Actor, ActorType, record
+from chatfront.channels.connect import CONNECTABLE, connect
 from chatfront.core.clock import utcnow
 from chatfront.core.errors import Forbidden, NotFound
 from chatfront.core.models import Tenant
@@ -147,3 +148,30 @@ async def set_plan(
             data={"plan": body.plan.value},
         )
     return {"shop": body.shop, "plan": body.plan.value}
+
+
+class ConnectIn(BaseModel):
+    shop: str = Field(min_length=1, max_length=60)
+    channel: Literal["whatsapp", "instagram", "messenger"]
+    account_id: str = Field(min_length=1, max_length=80)  # phone number id, Instagram or Page id
+    handle: str = Field(min_length=1, max_length=80)  # the number, or the username
+    token: str | None = Field(None, max_length=600)  # the business's own access token
+
+
+@router.post("/internal/connect")
+async def connect_account(
+    body: ConnectIn, services: ServicesDep, secret: SecretHeader = None
+) -> dict[str, str]:
+    """The operator connects a business's WhatsApp number (or Instagram, Messenger) after
+    adding it in Meta; its token is sealed and kept per business."""
+    _check(services, secret)
+    account = await connect(
+        services.db,
+        services.settings,
+        shop=body.shop,
+        channel=CONNECTABLE[body.channel],
+        account_id=body.account_id,
+        handle=body.handle,
+        token=body.token,
+    )
+    return {"shop": body.shop, "channel": body.channel, "display": account.display or ""}

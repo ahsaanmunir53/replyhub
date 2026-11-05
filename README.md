@@ -428,3 +428,20 @@ read. Every 15 minutes the orders changed since the last read are fetched (numbe
 total, status, cash on delivery, sent out; no customer details). At the hour the owner picks,
 the day's report goes to the owner's WhatsApp, and the owner can send "report", "aaj ka
 scene" or "pending cod" at any time.
+
+## Signing a business up (ReplyHub)
+
+With `COMMERCE=false` the web app opens on the sign-up form (also at `/signup`): business
+name and kind, country and city, the owner's name, email, WhatsApp number and language. The
+business is made on the Basic plan and the owner lands in the console, where Getting started
+lists what is left. `SIGNUP_OPEN=false` closes the form.
+
+The owner signs in again by sending "login" to the business's own WhatsApp number; the reply
+is a console link for 7 days. The operator connects a business's number once it is added in
+Meta, with the business's own access token:
+
+```
+curl -X POST https://<api>/internal/connect -H "X-Cron-Secret: $CRON_SECRET" \
+  -H 'content-type: application/json' \
+  -d '{"shop":"<slug>","channel":"whatsapp","account_id":"<phone number id>","handle":"+971...","token":"<token>"}'
+```
