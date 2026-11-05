@@ -48,6 +48,7 @@ from chatfront.core.money import Minor
 from chatfront.jobs.queue import JobContext
 from chatfront.media import service as media_service
 from chatfront.media.models import Media
+from chatfront.owner import rules
 from chatfront.shield import privacy
 from chatfront.templates import get_template
 
@@ -125,6 +126,7 @@ def shop_details(
     ):
         if value := profile.get(key):
             lines.append(f"{label}: {value}")
+    lines += rules.detail_lines(tenant)
     if items:
         lines += ["Products:", *catalog_lines(tenant, items)]
     return "\n".join([*lines, *notes])

@@ -46,6 +46,7 @@ from chatfront.owner.dashboard import router as dashboard_router
 from chatfront.owner.inbox import router as inbox_router
 from chatfront.owner.posts import router as posts_router
 from chatfront.owner.routes import router as owner_router
+from chatfront.owner.rules_routes import router as rules_router
 from chatfront.owner.team import router as team_router
 from chatfront.payments.format_routes import router as formats_router
 from chatfront.payments.refund_routes import router as refunds_router
@@ -184,6 +185,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(leads_router)
     app.include_router(imports_router)
     app.include_router(size_charts_router)
+    app.include_router(rules_router)
     app.include_router(team_router)
     app.include_router(books_router)
     app.include_router(crm_router)
