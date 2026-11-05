@@ -1,0 +1,107 @@
+# Render blueprint: one free web service runs the API and the job worker (and can serve the
+# web app too); a free static site serves the web app from Render's CDN, so pages open at
+# once even while the API is asleep, and the page wakes the API and says so meanwhile.
+# Render's free tier has no background workers, so cron-job.org calls /internal/cron.
+services:
+  - type: web
+    name: chatfront
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /live
+    autoDeploy: true
+    envVars:
+      - key: ENV
+        value: prod
+      - key: PUBLIC_BASE_URL
+        sync: false
+      # Only when the web app is on GitHub Pages: https://<user>.github.io/chatfront
+      - key: WEB_BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PHONE_HASH_KEY
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_VERIFY_TOKEN
+        generateValue: true
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: INSTAGRAM_APP_SECRET
+        sync: false
+      - key: INSTAGRAM_ACCESS_TOKEN
+        sync: false
+      - key: MESSENGER_PAGE_ACCESS_TOKEN
+        sync: false
+      - key: META_CATALOG_TOKEN
+        sync: false
+      # The GitHub Pages address of the web app, e.g. https://ahsaanmunir53.github.io
+      - key: CORS_ORIGINS
+        sync: false
+      # auto: real models once a key is set; mock: recorded replies that say so
+      - key: AI_MODE
+        value: auto
+      - key: BASETEN_API_KEY
+        sync: false
+      - key: FIREWORKS_API_KEY
+        sync: false
+      - key: MODAL_GLIMMER_BASE_URL
+        sync: false
+      - key: MODAL_GLIMMER_API_KEY
+        sync: false
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "5"
+      # Optional; each one turns a feature on (.env.example says where to get it)
+      - key: SAFE_BROWSING_API_KEY
+        sync: false
+      - key: WHATSAPP_ALERT_TEMPLATE
+        sync: false
+      - key: WHATSAPP_OFFER_TEMPLATE
+        sync: false
+      - key: WHATSAPP_FLOW_PRODUCT_ID
+        sync: false
+      - key: WHATSAPP_FLOW_BOOKING_ID
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+
+  # The web app on its own: never sleeps. Point it at the API above; then set CORS_ORIGINS and
+  # WEB_BASE_URL on the API to this site's address so links in chats open here.
+  - type: web
+    name: chatfront-web
+    runtime: static
+    buildCommand: cd web && npm ci && npm run build
+    staticPublishPath: ./web/dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_API_BASE
+        value: https://chatfront-3fw8.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://chatfront-3fw8.onrender.com; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Frame-Options
+        value: DENY

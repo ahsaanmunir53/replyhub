@@ -1,0 +1,266 @@
+{
+  "id": "clothing",
+  "name": {
+    "en": "Clothing and fashion",
+    "ur": "کپڑے اور فیشن",
+    "ur-Latn": "Kapre aur fashion"
+  },
+  "product_fields": [
+    {
+      "key": "size",
+      "type": "choice",
+      "options": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "label": {
+        "en": "Size",
+        "ur": "سائز",
+        "ur-Latn": "Size"
+      }
+    },
+    {
+      "key": "colour",
+      "type": "text",
+      "label": {
+        "en": "Colour",
+        "ur": "رنگ",
+        "ur-Latn": "Rang"
+      }
+    },
+    {
+      "key": "fabric",
+      "type": "choice",
+      "options": [
+        "lawn",
+        "cotton",
+        "khaddar",
+        "chiffon",
+        "silk",
+        "linen",
+        "karandi"
+      ],
+      "label": {
+        "en": "Fabric",
+        "ur": "کپڑا",
+        "ur-Latn": "Kapra"
+      }
+    },
+    {
+      "key": "pieces",
+      "type": "choice",
+      "options": [
+        "1",
+        "2",
+        "3"
+      ],
+      "label": {
+        "en": "Pieces",
+        "ur": "پیس",
+        "ur-Latn": "Pieces"
+      }
+    },
+    {
+      "key": "stitching",
+      "type": "choice",
+      "options": [
+        "stitched",
+        "unstitched"
+      ],
+      "label": {
+        "en": "Stitching",
+        "ur": "سلائی",
+        "ur-Latn": "Silai"
+      }
+    }
+  ],
+  "order_flow": [
+    "size_check",
+    "address",
+    "location_pin",
+    "payment_choice"
+  ],
+  "payment_methods": [
+    "cod_with_advance",
+    "transfer"
+  ],
+  "agent_questions": [
+    {
+      "key": "size",
+      "text": {
+        "en": "Which size do you need? I can check the size chart for you.",
+        "ur": "آپ کو کون سا سائز چاہیے؟ میں سائز چارٹ دیکھ کر بتا سکتا ہوں۔",
+        "ur-Latn": "Aap ko kaunsa size chahiye? Main size chart dekh kar bata sakta hoon."
+      }
+    },
+    {
+      "key": "stitching",
+      "text": {
+        "en": "Stitched or unstitched?",
+        "ur": "سلا ہوا یا ان سلا؟",
+        "ur-Latn": "Silai wala ya bina silai?"
+      }
+    }
+  ],
+  "default_weight_g": 500,
+  "return_days": 7,
+  "size_charts": [
+    {
+      "name": "Stitched suits and kurtas",
+      "unit": "in",
+      "categories": ["suits", "kurtas"],
+      "rows": [
+        {"size": "XS", "ranges": {"chest": [32, 33], "waist": [25, 26], "hips": [34, 35]}},
+        {"size": "S", "ranges": {"chest": [34, 35], "waist": [27, 28], "hips": [36, 37]}},
+        {"size": "M", "ranges": {"chest": [36, 37], "waist": [29, 30], "hips": [38, 39]}},
+        {"size": "L", "ranges": {"chest": [38, 40], "waist": [31, 33], "hips": [40, 42]}},
+        {"size": "XL", "ranges": {"chest": [41, 43], "waist": [34, 36], "hips": [43, 45]}},
+        {"size": "XXL", "ranges": {"chest": [44, 46], "waist": [37, 39], "hips": [46, 48]}}
+      ]
+    }
+  ],
+  "demo": {
+    "slug": "gulmohar-lawn",
+    "name": "Gulmohar Lawn House",
+    "tier": "small",
+    "city": "Lahore",
+    "tagline": {
+      "en": "Lawn, chiffon and khaddar suits, delivered across Pakistan",
+      "ur": "لان، شیفون اور کھدر کے سوٹ، پورے پاکستان میں ڈیلیوری",
+      "ur-Latn": "Lawn, chiffon aur khaddar ke suit, poore Pakistan mein delivery"
+    },
+    "offers": {
+      "bundles": [
+        {"name": "Winter suit with dupatta", "products": ["Khaddar 2-piece, stitched", "Embroidered chiffon dupatta"], "off": 450}
+      ],
+      "coupons": [
+        {"code": "WELCOME10", "percent": 10, "min_subtotal": 3000, "days": 30, "show_on_page": true}
+      ],
+      "loyalty": {"earn_per": 100, "point_value": 1, "max_share": 20}
+    },
+    "products": [
+      {
+        "name": "Printed lawn 3-piece",
+        "price": 4850,
+        "cost": 3400,
+        "floor": 4400,
+        "category": "suits",
+        "description": "Unstitched printed lawn suit: shirt, dupatta and trouser fabric.",
+        "attributes": {
+          "fabric": "lawn",
+          "pieces": "3",
+          "stitching": "unstitched"
+        },
+        "variants": [
+          {
+            "options": {
+              "colour": "Sea green"
+            },
+            "stock": 6
+          },
+          {
+            "options": {
+              "colour": "Rust"
+            },
+            "stock": 4
+          }
+        ]
+      },
+      {
+        "name": "Embroidered chiffon dupatta",
+        "price": 2200,
+        "cost": 1540,
+        "floor": 1950,
+        "category": "dupattas",
+        "description": "Chiffon dupatta with embroidered borders.",
+        "attributes": {
+          "fabric": "chiffon",
+          "pieces": "1"
+        },
+        "variants": [
+          {
+            "options": {
+              "colour": "Black"
+            },
+            "stock": 8
+          },
+          {
+            "options": {
+              "colour": "Off-white"
+            },
+            "stock": 5
+          }
+        ]
+      },
+      {
+        "name": "Khaddar 2-piece, stitched",
+        "price": 3950,
+        "cost": 2760,
+        "floor": 3600,
+        "category": "suits",
+        "description": "Stitched khaddar shirt and trouser for winter.",
+        "attributes": {
+          "fabric": "khaddar",
+          "pieces": "2",
+          "stitching": "stitched"
+        },
+        "variants": [
+          {
+            "options": {
+              "size": "S"
+            },
+            "stock": 3
+          },
+          {
+            "options": {
+              "size": "M"
+            },
+            "stock": 5
+          },
+          {
+            "options": {
+              "size": "L"
+            },
+            "stock": 2
+          }
+        ]
+      },
+      {
+        "name": "Linen kurta",
+        "price": 2750,
+        "cost": 1920,
+        "category": "kurtas",
+        "description": "Plain linen kurta with a straight cut.",
+        "attributes": {
+          "fabric": "linen",
+          "pieces": "1",
+          "stitching": "stitched"
+        },
+        "variants": [
+          {
+            "options": {
+              "size": "M"
+            },
+            "stock": 4
+          },
+          {
+            "options": {
+              "size": "L"
+            },
+            "stock": 4
+          },
+          {
+            "options": {
+              "size": "XL"
+            },
+            "stock": 1
+          }
+        ]
+      }
+    ]
+  }
+}

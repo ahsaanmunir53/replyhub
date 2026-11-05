@@ -1,0 +1,400 @@
+"""Instagram DMs and Facebook Messenger: one adapter, because Meta gives both the same shape.
+
+Webhooks arrive as {"object": "instagram" | "page", "entry": [{"id": <account>, "messaging":
+[...]}]}. Replies go to /me/messages with the account's token as a Bearer header, which names the
+sender: a Page token on graph.facebook.com for Messenger and for an Instagram account linked
+to the Page (Instagram with Facebook Login, the only way open to new apps), or an Instagram
+token on graph.instagram.com. Buttons and lists become quick replies, which both channels support.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import UTC, datetime
+from typing import Any
+
+import httpx
+
+from chatfront.channels.base import AccountRef
+from chatfront.channels.models import Channel
+from chatfront.channels.types import (
+    Capability,
+    Inbound,
+    Kind,
+    Outbound,
+    OutButtons,
+    OutImage,
+    OutList,
+    OutText,
+    StatusUpdate,
+)
+from chatfront.core.errors import AppError
+from chatfront.core.http import request
+
+CARD_TEXT_MAX = 80  # Meta's limit for a generic template's title and subtitle
+BUTTON_TITLE_MAX = 20
+
+log = logging.getLogger(__name__)
+
+POST_FIELDS = "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp"
+QUICK_REPLY_TITLE_MAX = 20
+QUICK_REPLIES_MAX = 13
+_ATTACHMENT_KINDS = {
+    "image": Kind.IMAGE,
+    "audio": Kind.AUDIO,
+    "video": Kind.VIDEO,
+    "file": Kind.DOCUMENT,
+    "ig_reel": Kind.VIDEO,  # a reel the customer shared: its video is read (feature 88)
+    "reel": Kind.VIDEO,
+}
+
+
+def _clip_bytes(text: str, limit: int) -> str:
+    """Cut text to a byte limit without splitting a character (Urdu is 2 bytes a letter)."""
+    encoded = text.encode()
+    if len(encoded) <= limit:
+        return text
+    return encoded[: limit - 3].decode(errors="ignore") + "…"
+
+
+def _quick_replies(options: list[tuple[str, str]]) -> list[dict[str, str]]:
+    return [
+        {"content_type": "text", "title": title[:QUICK_REPLY_TITLE_MAX], "payload": option_id}
+        for option_id, title in options[:QUICK_REPLIES_MAX]
+    ]
+
+
+class MetaMessagingAdapter:
+    capabilities = frozenset(
+        {Capability.TEXT, Capability.BUTTONS, Capability.LIST, Capability.IMAGE}
+    )
+    has_service_window = True
+
+    def __init__(
+        self,
+        http: httpx.AsyncClient,
+        *,
+        channel: Channel,
+        webhook_object: str,
+        graph_base_url: str,
+        version: str,
+        text_limit_bytes: int,
+    ) -> None:
+        self.http = http
+        self.channel = channel
+        self.webhook_object = webhook_object
+        self.base = f"{graph_base_url.rstrip('/')}/{version}"
+        self.text_limit_bytes = text_limit_bytes
+
+    # --- inbound ------------------------------------------------------------------------
+
+    def parse(self, payload: dict[str, Any]) -> tuple[list[Inbound], list[StatusUpdate]]:
+        messages: list[Inbound] = []
+        statuses: list[StatusUpdate] = []
+        if payload.get("object") != self.webhook_object:
+            return messages, statuses
+        for entry in payload.get("entry", []):
+            account_id = str(entry.get("id", ""))
+            for event in entry.get("messaging", []):
+                try:
+                    statuses.extend(self._statuses(event))
+                    if parsed := self._event(event, account_id):
+                        messages.append(parsed)
+                except (KeyError, TypeError, ValueError):
+                    log.warning("skipping a %s event that could not be read", self.channel)
+        return messages, statuses
+
+    def _event(self, event: dict[str, Any], account_id: str) -> Inbound | None:
+        sender = str(event["sender"]["id"])
+        sent_at = datetime.fromtimestamp(int(event.get("timestamp", 0)) / 1000, UTC)
+        base: dict[str, Any] = {
+            "channel": self.channel,
+            "account_external_id": account_id,
+            "sender_id": sender,
+            "sent_at": sent_at,
+        }
+        payload: dict[str, Any] = {}
+        if referral := event.get("referral") or (event.get("message") or {}).get("referral"):
+            payload["referral"] = referral  # ig.me / m.me ref, or the ad that opened the chat
+        if "postback" in event:
+            postback = event["postback"]
+            payload["button_id"] = postback.get("payload")
+            message_id = postback.get("mid") or f"postback:{sender}:{event.get('timestamp')}"
+            return Inbound(
+                **base,
+                message_id=message_id,
+                kind=Kind.BUTTON,
+                text=postback.get("title"),
+                payload=payload,
+            )
+        message = event.get("message")
+        if not message or message.get("is_echo") or message.get("is_deleted"):
+            return None  # our own replies echo back; deletions need no answer
+        if quick := message.get("quick_reply"):
+            payload["button_id"] = quick.get("payload")
+            return Inbound(
+                **base,
+                message_id=message["mid"],
+                kind=Kind.BUTTON,
+                text=message.get("text"),
+                payload=payload,
+            )
+        if reply_to := message.get("reply_to"):
+            payload["reply_to"] = reply_to
+        attachments = message.get("attachments") or []
+        if attachments:
+            first = attachments[0]
+            kind = _ATTACHMENT_KINDS.get(first.get("type", ""), Kind.UNSUPPORTED)
+            url = (first.get("payload") or {}).get("url")
+            payload["attachment_type"] = first.get("type")
+            if reel := (first.get("payload") or {}).get("reel_video_id"):
+                payload["reel_id"] = str(reel)  # the shop's own reel names its product
+            if kind is Kind.UNSUPPORTED and url:
+                payload["url"] = url  # a shared post, reel or story mention
+            return Inbound(
+                **base,
+                message_id=message["mid"],
+                kind=kind,
+                text=message.get("text"),
+                media_ref=url if kind is not Kind.UNSUPPORTED else None,
+                payload=payload,
+            )
+        return Inbound(
+            **base,
+            message_id=message["mid"],
+            kind=Kind.TEXT,
+            text=message.get("text"),
+            payload=payload,
+        )
+
+    def _statuses(self, event: dict[str, Any]) -> list[StatusUpdate]:
+        if delivery := event.get("delivery"):
+            return [
+                StatusUpdate(self.channel, mid, "delivered") for mid in delivery.get("mids", [])
+            ]
+        if (read := event.get("read")) and read.get("mid"):
+            return [StatusUpdate(self.channel, read["mid"], "read")]
+        return []
+
+    # --- outbound -----------------------------------------------------------------------
+
+    def _message(self, message: Outbound) -> dict[str, Any]:
+        match message:
+            case OutText(text=text):
+                return {"text": _clip_bytes(text, self.text_limit_bytes)}
+            case OutButtons(text=text, buttons=buttons):
+                return {
+                    "text": _clip_bytes(text, self.text_limit_bytes),
+                    "quick_replies": _quick_replies([(b.id, b.title) for b in buttons]),
+                }
+            case OutList(text=text, rows=rows):
+                return {
+                    "text": _clip_bytes(text, self.text_limit_bytes),
+                    "quick_replies": _quick_replies([(r.id, r.title) for r in rows]),
+                }
+            case OutImage(url=url, caption=caption, title=title, buttons=buttons):
+                # A generic template: picture, title and one line under it, on both channels.
+                lines = caption.split("\n")
+                return {
+                    "attachment": {
+                        "type": "template",
+                        "payload": {
+                            "template_type": "generic",
+                            "elements": [
+                                {
+                                    "title": (title or lines[0])[:CARD_TEXT_MAX],
+                                    "subtitle": " · ".join(lines[1:])[:CARD_TEXT_MAX],
+                                    "image_url": url,
+                                    **(
+                                        {
+                                            "buttons": [
+                                                {
+                                                    "type": "postback",
+                                                    "title": b.title[:BUTTON_TITLE_MAX],
+                                                    "payload": b.id,
+                                                }
+                                                for b in buttons[:3]
+                                            ]
+                                        }
+                                        if buttons
+                                        else {}
+                                    ),
+                                }
+                            ],
+                        },
+                    }
+                }
+        raise AppError("unsupported_message", f"{self.channel} cannot send this message")
+
+    async def send(self, account: AccountRef, to: str, message: Outbound) -> str:
+        headers = self._bearer(account)
+        body: dict[str, Any] = {"recipient": {"id": to}, "message": self._message(message)}
+        if self.channel is Channel.MESSENGER:
+            body["messaging_type"] = "RESPONSE"
+        response = await request(
+            self.http,
+            "POST",
+            f"{self.base}/me/messages",
+            service=self.channel,
+            json=body,
+            headers=headers,
+            retries=0,
+        )
+        message_id = response.json().get("message_id")
+        if not isinstance(message_id, str):
+            raise AppError(f"{self.channel}_bad_response", "No message id came back")
+        return message_id
+
+    def _bearer(self, account: AccountRef) -> dict[str, str]:
+        if not account.access_token:
+            raise AppError(f"{self.channel}_token_missing", f"No {self.channel} token is set")
+        return {"Authorization": f"Bearer {account.access_token}"}
+
+    async def private_reply(
+        self, account: AccountRef, comment_id: str, text: str
+    ) -> tuple[str, str]:
+        """The one DM Meta allows to the person who wrote a comment, within 7 days of it
+        (feature 77). Returns their id on this channel and the message id."""
+        response = await request(
+            self.http,
+            "POST",
+            f"{self.base}/me/messages",
+            service=self.channel,
+            json={
+                "recipient": {"comment_id": comment_id},
+                "message": {"text": _clip_bytes(text, self.text_limit_bytes)},
+            },
+            headers=self._bearer(account),
+            retries=0,
+        )
+        data = response.json()
+        recipient, message_id = data.get("recipient_id"), data.get("message_id")
+        if not isinstance(recipient, str) or not isinstance(message_id, str):
+            raise AppError(f"{self.channel}_bad_response", "No recipient or message id came back")
+        return recipient, message_id
+
+    async def post_info(self, account: AccountRef, media_id: str) -> tuple[str | None, str | None]:
+        """A post's caption and link, so the owner sees which post it is and code can find the
+        product it names."""
+        instagram = self.channel is Channel.INSTAGRAM
+        response = await request(
+            self.http,
+            "GET",
+            f"{self.base}/{media_id}",
+            service=self.channel,
+            params={"fields": "caption,permalink" if instagram else "message,permalink_url"},
+            headers=self._bearer(account),
+        )
+        data = response.json()
+        caption = data.get("caption" if instagram else "message")
+        link = data.get("permalink" if instagram else "permalink_url")
+        return (
+            caption if isinstance(caption, str) else None,
+            link if isinstance(link, str) else None,
+        )
+
+    async def recent_posts(self, account: AccountRef, limit: int) -> list[dict[str, Any]]:
+        """The account's latest posts and reels, newest first, with their captions and
+        pictures (Instagram; feature 84)."""
+        response = await request(
+            self.http,
+            "GET",
+            f"{self.base}/{account.external_id}/media",
+            service=self.channel,
+            params={"fields": POST_FIELDS, "limit": str(limit)},
+            headers=self._bearer(account),
+        )
+        return [post for post in response.json().get("data") or [] if isinstance(post, dict)]
+
+    async def _create(self, account: AccountRef, fields: dict[str, str]) -> str:
+        response = await request(
+            self.http,
+            "POST",
+            f"{self.base}/{account.external_id}/media",
+            service=self.channel,
+            json=fields,
+            headers=self._bearer(account),
+            retries=0,
+        )
+        container = response.json().get("id")
+        if not isinstance(container, str):
+            raise AppError(f"{self.channel}_bad_response", "No media container came back")
+        return container
+
+    async def publish_post(self, account: AccountRef, image_urls: list[str], caption: str) -> str:
+        """An Instagram post of one picture, or a carousel of several (features 7 and 82),
+        through the content publishing API: a container per picture, then publish. Meta
+        fetches each picture from its link. Returns the post's media id."""
+        if not image_urls:
+            raise AppError("nothing_to_post", "A post needs a picture")
+        if len(image_urls) == 1:
+            container = await self._create(
+                account, {"image_url": image_urls[0], "caption": caption}
+            )
+        else:
+            children = [
+                await self._create(account, {"image_url": url, "is_carousel_item": "true"})
+                for url in image_urls[:10]
+            ]
+            container = await self._create(
+                account,
+                {"media_type": "CAROUSEL", "children": ",".join(children), "caption": caption},
+            )
+        response = await request(
+            self.http,
+            "POST",
+            f"{self.base}/{account.external_id}/media_publish",
+            service=self.channel,
+            json={"creation_id": container},
+            headers=self._bearer(account),
+            retries=0,
+        )
+        media_id = response.json().get("id")
+        if not isinstance(media_id, str):
+            raise AppError(f"{self.channel}_bad_response", "No post id came back")
+        return media_id
+
+    async def publish_photo(self, account: AccountRef, image_url: str, caption: str) -> str:
+        """A photo post on the Facebook Page (feature 82). Returns the post's id."""
+        response = await request(
+            self.http,
+            "POST",
+            f"{self.base}/{account.external_id}/photos",
+            service=self.channel,
+            json={"url": image_url, "caption": caption},
+            headers=self._bearer(account),
+            retries=0,
+        )
+        data = response.json()
+        post = data.get("post_id") or data.get("id")
+        if not isinstance(post, str):
+            raise AppError(f"{self.channel}_bad_response", "No post id came back")
+        return post
+
+    async def download_media(self, account: AccountRef, media_ref: str) -> bytes:
+        """Attachment links are signed CDN URLs, so no token is sent with them."""
+        del account
+        response = await request(self.http, "GET", media_ref, service=self.channel)
+        return response.content
+
+
+def instagram_adapter(http: httpx.AsyncClient, base_url: str, version: str) -> MetaMessagingAdapter:
+    return MetaMessagingAdapter(
+        http,
+        channel=Channel.INSTAGRAM,
+        webhook_object="instagram",
+        graph_base_url=base_url,
+        version=version,
+        text_limit_bytes=1000,
+    )
+
+
+def messenger_adapter(http: httpx.AsyncClient, base_url: str, version: str) -> MetaMessagingAdapter:
+    return MetaMessagingAdapter(
+        http,
+        channel=Channel.MESSENGER,
+        webhook_object="page",
+        graph_base_url=base_url,
+        version=version,
+        text_limit_bytes=2000,
+    )

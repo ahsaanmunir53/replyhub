@@ -1,0 +1,204 @@
+{
+  "code": "PK",
+  "name": "Pakistan",
+  "currency": "PKR",
+  "minor_digits": 2,
+  "money": {
+    "symbol": "Rs",
+    "position": "before",
+    "show_minor": "nonzero",
+    "local_symbols": {
+      "ur": {
+        "symbol": "روپے",
+        "position": "after"
+      },
+      "pa-Arab": {
+        "symbol": "روپے",
+        "position": "after"
+      },
+      "sd": {
+        "symbol": "رپيا",
+        "position": "after"
+      },
+      "ps": {
+        "symbol": "روپۍ",
+        "position": "after"
+      }
+    }
+  },
+  "number_locale": "en-PK",
+  "grouping": "3",
+  "date_style": "medium",
+  "timezone": "Asia/Karachi",
+  "phone": {
+    "calling_code": "92",
+    "trunk_prefix": "0",
+    "national_lengths": [
+      10
+    ],
+    "example": "0300 1234567"
+  },
+  "tax_label": "Sales tax (GST)",
+  "delivery": {
+    "local_fee": 150,
+    "national_fee": 250,
+    "per_kg": 60,
+    "included_kg": 1,
+    "free_over": null
+  },
+  "cities": [
+    {
+      "name": "Lahore",
+      "aliases": [
+        "lhr",
+        "لاہور",
+        "lahor"
+      ]
+    },
+    {
+      "name": "Karachi",
+      "aliases": [
+        "khi",
+        "کراچی"
+      ]
+    },
+    {
+      "name": "Islamabad",
+      "aliases": [
+        "isb",
+        "isl",
+        "اسلام آباد"
+      ]
+    },
+    {
+      "name": "Rawalpindi",
+      "aliases": [
+        "pindi",
+        "rwp",
+        "راولپنڈی",
+        "پنڈی"
+      ]
+    },
+    {
+      "name": "Faisalabad",
+      "aliases": [
+        "fsd",
+        "lyallpur",
+        "فیصل آباد"
+      ]
+    },
+    {
+      "name": "Multan",
+      "aliases": [
+        "ملتان"
+      ]
+    },
+    {
+      "name": "Peshawar",
+      "aliases": [
+        "پشاور",
+        "پېښور"
+      ]
+    },
+    {
+      "name": "Quetta",
+      "aliases": [
+        "کوئٹہ"
+      ]
+    },
+    {
+      "name": "Sialkot",
+      "aliases": [
+        "سیالکوٹ"
+      ]
+    },
+    {
+      "name": "Gujranwala",
+      "aliases": [
+        "گوجرانوالہ"
+      ]
+    },
+    {
+      "name": "Hyderabad",
+      "aliases": [
+        "حیدرآباد",
+        "حيدرآباد"
+      ]
+    },
+    {
+      "name": "Sargodha",
+      "aliases": [
+        "سرگودھا"
+      ]
+    },
+    {
+      "name": "Bahawalpur",
+      "aliases": [
+        "بہاولپور"
+      ]
+    },
+    {
+      "name": "Sukkur",
+      "aliases": [
+        "سکھر",
+        "سکر"
+      ]
+    },
+    {
+      "name": "Abbottabad",
+      "aliases": [
+        "ایبٹ آباد"
+      ]
+    },
+    {
+      "name": "Gujrat",
+      "aliases": [
+        "گجرات"
+      ]
+    },
+    {
+      "name": "Sahiwal",
+      "aliases": [
+        "ساہیوال"
+      ]
+    },
+    {
+      "name": "Mardan",
+      "aliases": [
+        "مردان"
+      ]
+    }
+  ],
+  "languages": [
+    "ur-Latn",
+    "ur",
+    "en",
+    "pa-Arab",
+    "ps",
+    "sd",
+    "skr"
+  ],
+  "wallets": [
+    {
+      "id": "jazzcash",
+      "name": "JazzCash",
+      "kind": "wallet",
+      "parser": "pk.jazzcash",
+      "source": "sms"
+    },
+    {
+      "id": "easypaisa",
+      "name": "Easypaisa",
+      "kind": "wallet",
+      "parser": "pk.easypaisa",
+      "source": "sms"
+    },
+    {
+      "id": "bank",
+      "name": "Bank transfer (IBFT, Raast)",
+      "kind": "bank",
+      "parser": "pk.bank",
+      "source": "sms"
+    }
+  ]
+}

@@ -1,0 +1,284 @@
+{
+  "id": "grocery",
+  "name": {
+    "en": "Grocery and kiryana",
+    "ur": "کریانہ",
+    "ur-Latn": "Kiryana"
+  },
+  "product_fields": [
+    {
+      "key": "unit",
+      "type": "choice",
+      "options": [
+        "kg",
+        "g",
+        "litre",
+        "dozen",
+        "packet",
+        "piece"
+      ],
+      "required": true,
+      "label": {
+        "en": "Unit",
+        "ur": "اکائی",
+        "ur-Latn": "Unit"
+      }
+    },
+    {
+      "key": "brand",
+      "type": "text",
+      "label": {
+        "en": "Brand",
+        "ur": "برانڈ",
+        "ur-Latn": "Brand"
+      }
+    },
+    {
+      "key": "pack_size",
+      "type": "text",
+      "label": {
+        "en": "Pack size",
+        "ur": "پیک کا سائز",
+        "ur-Latn": "Pack size"
+      }
+    }
+  ],
+  "order_flow": [
+    "address",
+    "payment_choice"
+  ],
+  "payment_methods": [
+    "cod",
+    "credit",
+    "transfer"
+  ],
+  "agent_questions": [
+    {
+      "key": "repeat",
+      "text": {
+        "en": "Same as your last order?",
+        "ur": "پچھلے آرڈر جیسا ہی؟",
+        "ur-Latn": "Pichle order jaisa hi?"
+      }
+    }
+  ],
+  "modules": [
+    "growth"
+  ],
+  "default_weight_g": 1000,
+  "return_days": 2,
+  "demo": {
+    "slug": "barkat-kiryana",
+    "name": "Barkat Kiryana Store",
+    "tier": "small",
+    "city": "Rawalpindi",
+    "tagline": {
+      "en": "Daily groceries with home delivery in the neighbourhood",
+      "ur": "محلے میں گھر تک روزمرہ کا سودا",
+      "ur-Latn": "Mohalle mein ghar tak rozmarra ka sauda"
+    },
+    "products": [
+      {
+        "name": "Basmati rice",
+        "price": 380,
+        "cost": 270,
+        "category": "rice",
+        "description": "Long-grain basmati rice, sold by the kilogram.",
+        "attributes": {
+          "unit": "kg"
+        },
+        "tags": [
+          "chawal",
+          "chaawal",
+          "چاول",
+          "rice"
+        ],
+        "weight_g": 1000,
+        "variants": [
+          {
+            "stock": 120
+          }
+        ]
+      },
+      {
+        "name": "Cooking oil, 5 litre",
+        "price": 2950,
+        "cost": 2060,
+        "category": "oil",
+        "description": "Cooking oil in a 5 litre bottle.",
+        "attributes": {
+          "unit": "litre",
+          "pack_size": "5 litre"
+        },
+        "tags": [
+          "tel",
+          "ghee",
+          "تیل",
+          "گھی",
+          "oil"
+        ],
+        "weight_g": 4700,
+        "variants": [
+          {
+            "stock": 15
+          }
+        ]
+      },
+      {
+        "name": "Eggs",
+        "price": 330,
+        "cost": 230,
+        "category": "dairy",
+        "description": "Farm eggs, sold by the dozen.",
+        "attributes": {
+          "unit": "dozen"
+        },
+        "tags": [
+          "anday",
+          "ande",
+          "انڈے",
+          "انڈا"
+        ],
+        "weight_g": 750,
+        "variants": [
+          {
+            "stock": 40
+          }
+        ]
+      },
+      {
+        "name": "Sugar",
+        "price": 160,
+        "cost": 110,
+        "category": "basics",
+        "description": "White sugar, sold by the kilogram.",
+        "attributes": {
+          "unit": "kg"
+        },
+        "tags": [
+          "cheeni",
+          "chini",
+          "چینی"
+        ],
+        "weight_g": 1000,
+        "variants": [
+          {
+            "stock": 200
+          }
+        ]
+      },
+      {
+        "name": "Wheat flour (atta)",
+        "price": 150,
+        "cost": 100,
+        "category": "basics",
+        "description": "Chakki atta, sold by the kilogram.",
+        "attributes": {
+          "unit": "kg"
+        },
+        "tags": [
+          "atta",
+          "aata",
+          "آٹا",
+          "flour"
+        ],
+        "weight_g": 1000,
+        "variants": [
+          {
+            "stock": 300
+          }
+        ]
+      },
+      {
+        "name": "Red lentils (masoor daal)",
+        "price": 420,
+        "cost": 290,
+        "category": "pulses",
+        "description": "Split red lentils, sold by the kilogram.",
+        "attributes": {
+          "unit": "kg"
+        },
+        "tags": [
+          "daal",
+          "dal",
+          "masoor",
+          "دال",
+          "مسور"
+        ],
+        "weight_g": 1000,
+        "variants": [
+          {
+            "stock": 80
+          }
+        ]
+      },
+      {
+        "name": "Tea leaves, 475 g",
+        "price": 1250,
+        "cost": 880,
+        "category": "tea",
+        "description": "Black tea leaves in a 475 gram pack.",
+        "attributes": {
+          "unit": "packet",
+          "pack_size": "475 g"
+        },
+        "tags": [
+          "chai",
+          "patti",
+          "chai patti",
+          "چائے",
+          "پتی"
+        ],
+        "weight_g": 500,
+        "variants": [
+          {
+            "stock": 30
+          }
+        ]
+      },
+      {
+        "name": "Salt, 800 g",
+        "price": 60,
+        "cost": 42,
+        "category": "basics",
+        "description": "Iodised salt in an 800 gram pack.",
+        "attributes": {
+          "unit": "packet",
+          "pack_size": "800 g"
+        },
+        "tags": [
+          "namak",
+          "نمک"
+        ],
+        "weight_g": 800,
+        "variants": [
+          {
+            "stock": 60
+          }
+        ]
+      },
+      {
+        "name": "Milk, 1 litre",
+        "price": 220,
+        "cost": 150,
+        "category": "dairy",
+        "description": "UHT milk in a 1 litre pack.",
+        "attributes": {
+          "unit": "litre",
+          "pack_size": "1 litre"
+        },
+        "tags": [
+          "doodh",
+          "dudh",
+          "دودھ"
+        ],
+        "weight_g": 1050,
+        "variants": [
+          {
+            "stock": 48
+          }
+        ]
+      }
+    ]
+  }
+}

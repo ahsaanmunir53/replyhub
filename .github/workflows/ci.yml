@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # A non-superuser owner, like Neon's, so row-level security is tested the way it runs.
+  OWNER_URL: postgresql+asyncpg://chatfront_owner:owner@localhost:5432
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Create the owner role, the test database and the evaluation database
+        run: |
+          psql postgresql://postgres:postgres@localhost:5432/postgres \
+            -c "CREATE ROLE chatfront_owner LOGIN PASSWORD 'owner' CREATEROLE" \
+            -c "CREATE DATABASE chatfront_test OWNER chatfront_owner" \
+            -c "CREATE DATABASE chatfront_eval OWNER chatfront_owner"
+      - run: uv sync --frozen
+      # Voice notes and videos are read with ffmpeg; the tests make a short video with it.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Lint
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Audit Python dependencies
+        run: uv export --locked --format requirements-txt --no-emit-project --no-hashes --output-file /tmp/chatfront-requirements.txt && uvx pip-audit -r /tmp/chatfront-requirements.txt
+      - name: Types
+        run: uv run mypy
+      - name: Tests with coverage (85% minimum)
+        run: uv run pytest --cov --cov-report=term
+        env:
+          TEST_DATABASE_URL: ${{ env.OWNER_URL }}/chatfront_test
+      # The 100 scripted conversations through the whole app; the pass rate goes to the run's
+      # summary page, and anything short of 100/100 fails the build.
+      - name: Order agent evaluation set (replayed)
+        env:
+          DATABASE_URL: ${{ env.OWNER_URL }}/chatfront_eval
+          AI_MODE: mock
+        run: |
+          uv run alembic upgrade head
+          uv run python -m chatfront.seed
+          uv run python -m chatfront.eval.agent --markdown | tee -a "$GITHUB_STEP_SUMMARY"
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Types
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Reject published source maps
+        run: test -z "$(find dist -type f -name '*.map' -print -quit)"
+      - name: Audit production npm dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  e2e:
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Create the owner role and e2e database
+        run: |
+          psql postgresql://postgres:postgres@localhost:5432/postgres \
+            -c "CREATE ROLE chatfront_owner LOGIN PASSWORD 'owner' CREATEROLE" \
+            -c "CREATE DATABASE chatfront_e2e OWNER chatfront_owner"
+      - run: uv sync --frozen
+        working-directory: api
+      - run: npm ci && npm run build && npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Browser tests
+        run: npm run e2e
+        working-directory: web
+        env:
+          CI: "true"
+          E2E_DATABASE_URL: ${{ env.OWNER_URL }}/chatfront_e2e
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-traces
+          path: web/test-results
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Scan full Git history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
