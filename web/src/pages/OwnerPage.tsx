@@ -45,6 +45,7 @@ import { ReviewsPanel } from "../components/Reviews";
 import { ShelfCountPanel } from "../components/ShelfCount";
 import { ShelfCameraPanel } from "../components/ShelfCamera";
 import { NetworkCommercePanel } from "../components/NetworkCommerce";
+import { RulesPanel } from "../components/Rules";
 import { SizeChartsPanel } from "../components/SizeCharts";
 import { WaitingPanel } from "../components/Waiting";
 import { PostsPanel } from "../components/Posts";
@@ -414,6 +415,12 @@ function Console({
       label: "side.inbox",
       show: can("chats"),
       children: <InboxPanel me={me} token={token} />,
+    },
+    {
+      id: "rules",
+      label: "side.rules",
+      show: can("settings"),
+      children: <RulesPanel token={token} />,
     },
     {
       id: "products",

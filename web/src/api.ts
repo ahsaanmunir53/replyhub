@@ -110,6 +110,20 @@ export type SizeChart = {
 };
 export type SizeCharts = { charts: SizeChart[]; usual: SizeChart[]; categories: string[] };
 
+/** The owner's rules the assistant answers from (ReplyHub). */
+export type Rules = {
+  about: string;
+  hours: string;
+  address: string;
+  delivery: string;
+  how_to_order: string;
+  returns: string;
+  policies: string;
+  avoid: string;
+  tone: "friendly" | "formal" | "brief";
+  faqs: { question: string; answer: string }[];
+};
+
 /** What an import found (features 85, 84 and 2), waiting for the owner. */
 export type ImportDraft = {
   id: string;
@@ -1885,6 +1899,13 @@ export const api = {
       method: "POST",
       headers: bearer(token),
       body: JSON.stringify({ lines }),
+    }),
+  rules: (token: string) => call<Rules>("/api/owner/rules", { headers: bearer(token) }),
+  saveRules: (token: string, rules: Rules) =>
+    call<Rules>("/api/owner/rules", {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify(rules),
     }),
   sizeCharts: (token: string) =>
     call<SizeCharts>("/api/owner/size-charts", { headers: bearer(token) }),

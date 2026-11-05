@@ -7179,3 +7179,18 @@ button {
     padding-inline: var(--gutter);
   }
 }
+
+/* The assistant's rules: each of the owner's questions sits over its answer. */
+.rules-panel textarea {
+  width: 100%;
+  resize: vertical;
+}
+.rules-faq {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line, #e3e3e3);
+}
+.rules-faq .action {
+  justify-self: start;
+}
