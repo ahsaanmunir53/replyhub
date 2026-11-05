@@ -2009,5 +2009,9 @@
   "side.customers": "Customers",
   "side.safety": "Safety",
   "side.settings": "Team and settings",
-  "side.menu": "Console sections"
+  "side.menu": "Console sections",
+  "reply.checking": "Let me check the exact details with the team. They will message you here shortly.",
+  "reply.note_question": "{name} asked a question on {channel}: {note}",
+  "reply.note_complaint": "{name} has a complaint on {channel}: {note}",
+  "reply.note_request": "{name} wants to order on {channel}: {note}"
 }

@@ -54,6 +54,7 @@ _ROLE_SETTINGS: dict[Role, tuple[Effort, int, bool]] = {
 JOB_ROUTES: dict[str, tuple[Effort, int]] = {
     # job (prompt name): (effort, max_tokens incl. reasoning)
     "order_agent": (Effort.LOW, 4096),
+    "reply_agent": (Effort.LOW, 4096),  # ReplyHub: the same chat work, without selling
     "shop_assistant": (Effort.LOW, 4096),
     "owner_message": (Effort.LOW, 4096),
     "onboarding": (Effort.LOW, 4096),

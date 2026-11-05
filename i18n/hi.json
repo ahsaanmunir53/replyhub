@@ -2009,5 +2009,9 @@
   "side.customers": "ग्राहक",
   "side.safety": "सुरक्षा",
   "side.settings": "टीम और सेटिंग्स",
-  "side.menu": "कंसोल के हिस्से"
+  "side.menu": "कंसोल के हिस्से",
+  "reply.checking": "मैं टीम से सही जानकारी पक्की कर लेता हूँ। वे जल्द ही आपको यहीं मैसेज करेंगे।",
+  "reply.note_question": "{name} ने {channel} पर सवाल पूछा: {note}",
+  "reply.note_complaint": "{name} की {channel} पर शिकायत: {note}",
+  "reply.note_request": "{name} {channel} पर ऑर्डर करना चाहते हैं: {note}"
 }

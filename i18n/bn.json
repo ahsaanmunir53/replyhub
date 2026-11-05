@@ -2009,5 +2009,9 @@
   "side.customers": "গ্রাহক",
   "side.safety": "নিরাপত্তা",
   "side.settings": "টিম ও সেটিংস",
-  "side.menu": "কনসোলের অংশ"
+  "side.menu": "কনসোলের অংশ",
+  "reply.checking": "আমি টিমের সাথে সঠিক তথ্য নিশ্চিত করে নিচ্ছি। তারা শিগগিরই আপনাকে এখানেই মেসেজ করবে।",
+  "reply.note_question": "{name} {channel}-এ একটি প্রশ্ন করেছেন: {note}",
+  "reply.note_complaint": "{name}-এর {channel}-এ একটি অভিযোগ: {note}",
+  "reply.note_request": "{name} {channel}-এ অর্ডার করতে চান: {note}"
 }

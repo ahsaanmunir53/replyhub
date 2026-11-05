@@ -5,8 +5,10 @@ answer check (105) and the injection guard (106)."""
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import uuid
+from typing import Any
 
 import httpx
 import pytest
@@ -14,6 +16,7 @@ import respx
 from sqlalchemy import select, update
 
 from chatfront.ai.client import ModelUnavailable
+from chatfront.ai.mock import Fixture
 from chatfront.ai.types import AudioPart, ChatRequest, ChatResult
 from chatfront.audit.models import AuditEntry
 from chatfront.catalog.models import Product, StockMovement, Variant
@@ -23,6 +26,7 @@ from chatfront.core.models import Staff, StaffRole, Tenant
 from chatfront.core.phone import hash_phone
 from chatfront.orders.models import Order, OrderItem, PriceOffer
 from chatfront.services import Services
+from chatfront.stock.models import OwnerNotice
 from tests.integration.chat import (
     GRAPH,
     Client,
@@ -606,11 +610,60 @@ async def test_without_selling_the_model_gets_no_cart_or_checkout(
     but it is never given the cart, checkout or payment tools."""
     client, services = app
     monkeypatch.setattr(services.settings, "commerce", False)
-    mock = use(services, agent("kurta hai", content="Ji, linen kurta hai."))
+    mock = use(services, replying("kurta hai", content="Ji, linen kurta hai."))
     guest, token = await customer(client)
     reply = last(await say(client, services, SHOP, guest, "kurta hai?", token=token))
     assert reply["body"] == "Ji, linen kurta hai."
-    call = next(r for r in mock.requests if r.prompt and r.prompt.startswith("order_agent"))
+    call = next(r for r in mock.requests if r.prompt and r.prompt.startswith("reply_agent"))
     names = {spec["function"]["name"] for spec in call.tools}
     assert {"find_products", "hand_over"} <= names
     assert not names & {"add_to_cart", "view_cart", "checkout", "make_offer", "cancel_order"}
+
+
+def replying(match: str, **answer: Any) -> Fixture:
+    """A recorded answer of the ReplyHub assistant (selling off): its prompt is reply_agent."""
+    return dataclasses.replace(agent(match, **answer), prompt="reply_agent")
+
+
+async def test_without_selling_a_complaint_goes_to_the_owner_and_the_bot_keeps_the_chat(
+    app: tuple[Client, Services], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, services = app
+    monkeypatch.setattr(services.settings, "commerce", False)
+    note = "Order A12: the dupatta came torn; photo sent."
+    use(
+        services,
+        replying("phata hua", calls={"tell_owner": {"kind": "complaint", "note": note}}),
+        replying("phata hua", step=1, content="Maazrat! Team ko bata diya hai, woh rabta karegi."),
+        replying("aur ek baat", content="Ji, bataiye."),
+    )
+    guest, token = await customer(client)
+    reply = last(await say(client, services, SHOP, guest, "dupatta phata hua aya", token=token))
+    assert reply["body"] == "Maazrat! Team ko bata diya hai, woh rabta karegi."
+    assert services.worker is not None
+    while await services.worker.run_once():
+        pass
+    async with services.db.system() as session:
+        notice = await session.scalar(select(OwnerNotice))
+        handover = await session.scalar(select(Handover))
+    assert notice is not None
+    assert notice.kind == "customer_complaint"
+    assert note in notice.text
+    assert handover is None  # the assistant still answers the next message
+    reply = last(await say(client, services, SHOP, guest, "aur ek baat", token=token))
+    assert reply["body"] == "Ji, bataiye."
+
+
+async def test_without_selling_asking_for_a_person_reaches_the_assistant_first(
+    app: tuple[Client, Services], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Selling off: "I want to talk to a person" goes to the assistant, which offers to help
+    and hands over only if the customer still wants a person."""
+    client, services = app
+    monkeypatch.setattr(services.settings, "commerce", False)
+    use(services, replying("baat karni", content="Main madad kar sakta hoon. Kya chahiye?"))
+    guest, token = await customer(client)
+    reply = last(await say(client, services, SHOP, guest, "owner se baat karni hai", token=token))
+    assert reply["body"] == "Main madad kar sakta hoon. Kya chahiye?"
+    async with services.db.system() as session:
+        assert await session.scalar(select(Handover)) is None

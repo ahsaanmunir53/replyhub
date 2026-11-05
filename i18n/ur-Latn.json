@@ -2009,5 +2009,9 @@
   "side.customers": "Customers",
   "side.safety": "Hifazat",
   "side.settings": "Team aur settings",
-  "side.menu": "Console ke hisse"
+  "side.menu": "Console ke hisse",
+  "reply.checking": "Main team se pakki details confirm kar leta hoon. Woh jaldi aap ko yahin message karenge.",
+  "reply.note_question": "{name} ne {channel} par sawal poocha: {note}",
+  "reply.note_complaint": "{name} ki {channel} par shikayat: {note}",
+  "reply.note_request": "{name} {channel} par order karna chahte hain: {note}"
 }

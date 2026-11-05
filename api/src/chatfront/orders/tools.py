@@ -80,6 +80,8 @@ class AgentContext:
     items: Sequence[CatalogItem] = ()  # the shop's catalog this turn, for pictures of named items
     added: set[uuid.UUID] = field(default_factory=set)  # variants added this turn
     handover: str | None = None  # the reason, when the agent asked for a person
+    # (kind, note) the assistant passed to the owner while it keeps the chat (tell_owner)
+    owner_notes: list[tuple[str, str]] = field(default_factory=list)
 
     @property
     def actor(self) -> Actor:
@@ -158,6 +160,7 @@ class FindProducts(BaseModel):
 
 
 PICTURES_PER_TURN = 3
+OWNER_NOTES_PER_TURN = 2
 
 
 async def find_products(ctx: AgentContext, params: FindProducts) -> dict[str, Any]:
@@ -743,6 +746,19 @@ class HandOver(BaseModel):
     reason: str = Field(min_length=3, max_length=300, description="Why a person should take over")
 
 
+class OwnerNote(BaseModel):
+    kind: Literal["question", "complaint", "request"]
+    note: str = Field(min_length=1, max_length=400)
+
+
+async def tell_owner(ctx: AgentContext, params: OwnerNote) -> dict[str, Any]:
+    """Pass something to the owner and keep the chat: the assistant goes on answering."""
+    if len(ctx.owner_notes) >= OWNER_NOTES_PER_TURN:
+        return tool_error("already_noted")
+    ctx.owner_notes.append((params.kind, " ".join(params.note.split())))
+    return {"ok": True, "next_step": "tell the customer the team will follow up here"}
+
+
 async def hand_over(ctx: AgentContext, params: HandOver) -> dict[str, Any]:
     ctx.handover = params.reason
     return {"ok": True, "owner": "told; the owner replies in this chat"}
@@ -756,6 +772,13 @@ def order_tools() -> tuple[list[Tool], list[Tool]]:
             "Search the shop's products by words, or by what a customer's photo shows.",
             FindProducts,
             find_products,
+            "catalog",
+        ),
+        Tool(
+            "tell_owner",
+            "Pass a question, complaint or order request to the owner while you keep the chat.",
+            OwnerNote,
+            tell_owner,
             "catalog",
         ),
     ]

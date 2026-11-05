@@ -2009,5 +2009,9 @@
   "side.customers": "گاہک",
   "side.safety": "حفاظت",
   "side.settings": "ٹیم تے سیٹنگاں",
-  "side.menu": "کنسول دے حصے"
+  "side.menu": "کنسول دے حصے",
+  "reply.checking": "میں ٹیم کولوں پکی گل پچھ لینا واں۔ اوہ چھیتی تہانوں ایتھے ای میسج کرن گے۔",
+  "reply.note_question": "{name} نے {channel} تے سوال پچھیا: {note}",
+  "reply.note_complaint": "{name} دی {channel} تے شکایت: {note}",
+  "reply.note_request": "{name} {channel} تے آرڈر کرنا چاہندے نیں: {note}"
 }

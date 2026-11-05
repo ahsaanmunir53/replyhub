@@ -2009,5 +2009,9 @@
   "side.customers": "پېرودونکي",
   "side.safety": "خوندیتوب",
   "side.settings": "ټیم او امستنې",
-  "side.menu": "د کنسول برخې"
+  "side.menu": "د کنسول برخې",
+  "reply.checking": "زه به له ټیم سره دقیق معلومات وګورم. هغوی به ژر تاسو ته همدلته پیغام درکړي.",
+  "reply.note_question": "{name} په {channel} پوښتنه وکړه: {note}",
+  "reply.note_complaint": "{name} په {channel} شکایت لري: {note}",
+  "reply.note_request": "{name} په {channel} فرمایش کول غواړي: {note}"
 }

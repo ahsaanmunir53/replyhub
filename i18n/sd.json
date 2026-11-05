@@ -2009,5 +2009,9 @@
   "side.customers": "گراهڪ",
   "side.safety": "حفاظت",
   "side.settings": "ٽيم ۽ سيٽنگون",
-  "side.menu": "ڪنسول جا حصا"
+  "side.menu": "ڪنسول جا حصا",
+  "reply.checking": "مان ٽيم کان پڪي تفصيل معلوم ڪريان ٿو. اهي جلد توهان کي هتي ئي ميسيج ڪندا.",
+  "reply.note_question": "{name} {channel} تي سوال پڇيو: {note}",
+  "reply.note_complaint": "{name} جي {channel} تي شڪايت: {note}",
+  "reply.note_request": "{name} {channel} تي آرڊر ڪرڻ چاهي ٿو: {note}"
 }

@@ -2009,5 +2009,9 @@
   "side.customers": "العملاء",
   "side.safety": "الأمان",
   "side.settings": "الفريق والإعدادات",
-  "side.menu": "أقسام لوحة التحكم"
+  "side.menu": "أقسام لوحة التحكم",
+  "reply.checking": "دعني أتأكد من التفاصيل الدقيقة مع الفريق. سيراسلونك هنا قريبًا.",
+  "reply.note_question": "سأل {name} سؤالًا على {channel}: {note}",
+  "reply.note_complaint": "لدى {name} شكوى على {channel}: {note}",
+  "reply.note_request": "يريد {name} أن يطلب على {channel}: {note}"
 }

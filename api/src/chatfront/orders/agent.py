@@ -108,6 +108,7 @@ _INJECTION_NOTE = (
 
 # The modules that sell in the chat; off when the product only answers (settings.commerce).
 COMMERCE_MODULES = frozenset({"orders", "payments"})
+NOTE_CHARS = 600
 
 _BUY_NOTE = (
     "The customer tapped Order on the product card with code {}. Help them order it: ask "
@@ -169,9 +170,12 @@ class OrderAgent:
         scam = await phishing.scan(self.services.http, self.services.settings, turn.message.body)
         if scam.alarm is not None:
             return await self._scam(turn, scam)
-        if wants_a_person(turn.message.body):
+        # Selling off (ReplyHub): the assistant offers to help first and hands over only if the
+        # customer still wants a person; its prompt says so.
+        selling = self.services.settings.commerce
+        if selling and wants_a_person(turn.message.body):
             return await self._hand_over(turn, "the customer asked for a person", "customer")
-        if turn.media is not None:
+        if selling and turn.media is not None:
             payment = await handle_screenshot(self.services, turn)
             if payment is not None:
                 return payment
@@ -185,6 +189,10 @@ class OrderAgent:
         if ctx.handover is not None:
             return await self._hand_over(turn, ctx.handover, "agent")
         checked = await self._checked(turn, ctx, request, text)
+        if checked is None and not selling:  # keep the chat; the owner confirms the figure
+            ctx.owner_notes.append(("question", turn.message.body or ""))
+            checked = t("reply.checking", turn.lang)
+        await self._pass_notes(turn, ctx)
         if checked is None:
             return await self._hand_over(
                 turn, "a reply had figures the shop could not confirm", "code"
@@ -260,7 +268,7 @@ class OrderAgent:
             link_secret=services.settings.secret_key.get_secret_value(),
             items=items,
         )
-        prompt = load_prompt("order_agent")
+        prompt = load_prompt("order_agent" if services.settings.commerce else "reply_agent")
         system = prompt.render(
             shop_name=tenant.name,
             business_type=get_template(tenant.template).name.en.lower(),
@@ -448,6 +456,24 @@ class OrderAgent:
                 session, turn.tenant, customer_id, conversation_id=turn.conversation.id
             )
             orders.set_pin(order, pin)
+
+    async def _pass_notes(self, turn: Turn, ctx: AgentContext) -> None:
+        """What the assistant passed to the owner while keeping the chat goes to the owner, in
+        the owner's language, on WhatsApp when it can (else it waits in the console)."""
+        if not ctx.owner_notes:
+            return
+        channel = CHANNEL_NAMES[Channel(turn.message.channel)]
+        async with self.services.db.tenant(turn.tenant.id) as session:
+            customer = await session.get(Customer, turn.conversation.customer_id)
+            name = (customer.display_name if customer else None) or "A customer"
+            for kind, note in ctx.owner_notes:
+                await notices.queue(
+                    session,
+                    turn.tenant.id,
+                    f"customer_{kind}",
+                    f"reply.note_{kind}",
+                    {"name": name, "channel": channel, "note": note[:NOTE_CHARS]},
+                )
 
     async def _hand_over(self, turn: Turn, reason: str, by: str) -> list[Outbound]:
         await start_handover(
