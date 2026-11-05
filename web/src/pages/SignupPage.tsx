@@ -8,6 +8,9 @@ import { Page, Problem } from "../components/Shell";
 import { BASE_PATH } from "../config";
 import { useLang } from "../lang";
 
+// The terms and privacy policy, kept with the code so every change is on record.
+const DOCS = "https://github.com/ahsaanmunir53/replyhub/blob/main/docs/replyhub";
+
 const LANGS: { id: string; name: string }[] = [
   { id: "en", name: "English" },
   { id: "ar", name: "العربية" },
@@ -162,6 +165,16 @@ export function SignupPage() {
               </select>
             </label>
             <p className="aside">{t("signup.plan_note")}</p>
+            <p className="aside">
+              {t("signup.agree")}{" "}
+              <a href={`${DOCS}/TERMS.md`} target="_blank" rel="noreferrer">
+                {t("signup.terms")}
+              </a>
+              {" · "}
+              <a href={`${DOCS}/PRIVACY.md`} target="_blank" rel="noreferrer">
+                {t("signup.privacy")}
+              </a>
+            </p>
             {failed && <Problem message={t("signup.failed")} />}
             <button type="submit" className="button button-ink" disabled={busy}>
               {t("signup.submit")}

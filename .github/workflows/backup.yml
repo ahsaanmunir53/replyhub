@@ -1,0 +1,42 @@
+# A daily, encrypted copy of the database, kept for 7 days as a workflow artifact.
+# Set two repository secrets first: BACKUP_DATABASE_URL (the plain postgresql:// address from
+# Neon, not the +asyncpg one) and BACKUP_PASSPHRASE (a long random phrase, kept somewhere
+# safe; without it the copy cannot be opened). The copy is encrypted before it leaves the
+# runner, so the artifact is safe even on a public repository.
+# Restore: gpg -d replyhub.sql.gz.gpg | gunzip | psql "$DATABASE_URL"
+name: backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Dump, compress and encrypt
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "Set BACKUP_DATABASE_URL and BACKUP_PASSPHRASE to turn backups on."; exit 0
+          fi
+          set -o pipefail
+          docker run --rm -e URL="$BACKUP_DATABASE_URL" postgres:17 \
+            sh -c 'pg_dump --no-owner --no-privileges "$URL"' \
+            | gzip -9 \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                --passphrase-fd 3 -o replyhub.sql.gz.gpg 3<<<"$BACKUP_PASSPHRASE"
+          ls -l replyhub.sql.gz.gpg
+      - uses: actions/upload-artifact@v5
+        with:
+          name: replyhub-backup
+          path: replyhub.sql.gz.gpg
+          retention-days: 7
+          if-no-files-found: ignore

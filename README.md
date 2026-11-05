@@ -445,3 +445,20 @@ curl -X POST https://<api>/internal/connect -H "X-Cron-Secret: $CRON_SECRET" \
   -H 'content-type: application/json' \
   -d '{"shop":"<slug>","channel":"whatsapp","account_id":"<phone number id>","handle":"+971...","token":"<token>"}'
 ```
+
+## Security for ReplyHub
+
+- **Fake sign-ups:** at most `SIGNUPS_PER_DAY` new businesses a day from the form, plus a
+  per-address rate limit. Until the operator connects a business's WhatsApp number
+  (`/internal/connect`), its web chat answers at most `TRIAL_REPLIES_PER_DAY` messages a day.
+- **Store reads:** read-only keys, sealed at rest; only https addresses, and the address is
+  checked to be public at the moment of every connection (no DNS rebinding), with no redirects
+  and no proxy from the environment.
+- **Rotating `SECRET_KEY`:** set the new key as `SECRET_KEY` and the old as
+  `SECRET_KEY_PREVIOUS`, deploy, run `python -m chatfront.core.reseal` once, then remove
+  `SECRET_KEY_PREVIOUS`. Owners then ask for a new sign-in link ("login" on WhatsApp).
+- **Backups:** `.github/workflows/backup.yml` keeps a daily copy for 7 days, encrypted with
+  `BACKUP_PASSPHRASE` before it leaves the runner. Set `BACKUP_DATABASE_URL` and
+  `BACKUP_PASSPHRASE` as repository secrets to turn it on.
+- **Terms and privacy:** drafts in `docs/replyhub/`; fill in the bracketed parts and have a
+  lawyer check them before charging.
