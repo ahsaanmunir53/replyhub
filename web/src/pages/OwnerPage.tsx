@@ -46,6 +46,7 @@ import { ShelfCountPanel } from "../components/ShelfCount";
 import { ShelfCameraPanel } from "../components/ShelfCamera";
 import { NetworkCommercePanel } from "../components/NetworkCommerce";
 import { RulesPanel } from "../components/Rules";
+import { StorePanel } from "../components/StoreLink";
 import { SizeChartsPanel } from "../components/SizeCharts";
 import { WaitingPanel } from "../components/Waiting";
 import { PostsPanel } from "../components/Posts";
@@ -423,6 +424,12 @@ function Console({
       label: "side.rules",
       show: can("settings"),
       children: <RulesPanel token={token} />,
+    },
+    {
+      id: "store",
+      label: "side.store",
+      show: can("settings") && has("reports") && !COMMERCE,
+      children: <StorePanel me={me} token={token} />,
     },
     {
       id: "products",

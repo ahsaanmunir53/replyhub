@@ -7194,3 +7194,11 @@ button {
 .rules-faq .action {
   justify-self: start;
 }
+
+/* The website store: today's numbers in one line, and the last read's error beside it. */
+.store-today {
+  font-weight: 600;
+}
+.store-error {
+  color: var(--danger, #b42318);
+}

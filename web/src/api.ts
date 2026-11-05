@@ -110,6 +110,34 @@ export type SizeChart = {
 };
 export type SizeCharts = { charts: SizeChart[]; usual: SizeChart[]; categories: string[] };
 
+/** The business's website store (ReplyHub, Pro plan). The key is never sent back. */
+export type StoreToday = {
+  orders: number;
+  sales: number;
+  paid: number;
+  cod: number;
+  pending: number;
+  closed: number;
+  unsent: number;
+};
+export type Store = {
+  connected: boolean;
+  platform: "shopify" | "woocommerce" | null;
+  store_url: string | null;
+  key_set: boolean;
+  report_hour: number;
+  synced_at: string | null;
+  last_error: string | null;
+  today: StoreToday | null;
+};
+export type StoreIn = {
+  platform: "shopify" | "woocommerce";
+  store_url: string;
+  key: string;
+  secret: string;
+  report_hour: number;
+};
+
 /** The owner's rules the assistant answers from (ReplyHub). */
 export type Rules = {
   about: string;
@@ -1902,6 +1930,17 @@ export const api = {
       headers: bearer(token),
       body: JSON.stringify({ lines }),
     }),
+  store: (token: string) => call<Store>("/api/owner/store", { headers: bearer(token) }),
+  saveStore: (token: string, body: StoreIn) =>
+    call<Store>("/api/owner/store", {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify(body),
+    }),
+  syncStore: (token: string) =>
+    call<Store>("/api/owner/store/sync", { method: "POST", headers: bearer(token) }),
+  removeStore: (token: string) =>
+    call<Store>("/api/owner/store", { method: "DELETE", headers: bearer(token) }),
   rules: (token: string) => call<Rules>("/api/owner/rules", { headers: bearer(token) }),
   saveRules: (token: string, rules: Rules) =>
     call<Rules>("/api/owner/rules", {
