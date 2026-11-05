@@ -4,7 +4,7 @@
 # Render's free tier has no background workers, so cron-job.org calls /internal/cron.
 services:
   - type: web
-    name: chatfront
+    name: replyhub-api
     runtime: docker
     plan: free
     region: singapore
@@ -16,7 +16,7 @@ services:
         value: prod
       - key: PUBLIC_BASE_URL
         sync: false
-      # Only when the web app is on GitHub Pages: https://<user>.github.io/chatfront
+      # Only when the web app is on GitHub Pages: https://<user>.github.io/replyhub
       - key: WEB_BASE_URL
         sync: false
       - key: DATABASE_URL
@@ -80,14 +80,15 @@ services:
   # The web app on its own: never sleeps. Point it at the API above; then set CORS_ORIGINS and
   # WEB_BASE_URL on the API to this site's address so links in chats open here.
   - type: web
-    name: chatfront-web
+    name: replyhub-web
     runtime: static
     buildCommand: cd web && npm ci && npm run build
     staticPublishPath: ./web/dist
     pullRequestPreviewsEnabled: false
     envVars:
+      # Render may add a suffix to the API address (replyhub-api-xxxx); if so, change it here and in the CSP below.
       - key: VITE_API_BASE
-        value: https://chatfront-3fw8.onrender.com
+        value: https://replyhub-api.onrender.com
     routes:
       - type: rewrite
         source: /*
@@ -95,7 +96,7 @@ services:
     headers:
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://chatfront-3fw8.onrender.com; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://replyhub-api.onrender.com; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
