@@ -397,3 +397,23 @@ shops.
   `amount`, `currency`, and `status: "paid"`. Only signed, exact-amount, exact-currency events
   settle the ledger. This is a provider-neutral verification hook—not a hosted checkout or payout
   integration—so seller payout remains pending until a real payout adapter is configured.
+
+## ReplyHub plans
+
+With `COMMERCE=false` (ReplyHub), each business is on a plan, and the console and the API
+show only what it includes:
+
+| Plan | Features |
+|---|---|
+| Basic | The assistant on WhatsApp and the website chat, answering by the owner's rules |
+| Pro | Basic, plus the shared inbox, the owner's WhatsApp commands and the website reports |
+| Business | Pro, plus staff logins, broadcasts, and Instagram and Messenger |
+
+A new business starts on Basic. The operator sets the plan after payment:
+
+```
+curl -X POST https://<api>/internal/plan -H "X-Cron-Secret: $CRON_SECRET" \
+  -H 'content-type: application/json' -d '{"shop":"<slug>","plan":"pro"}'
+```
+
+With `COMMERCE=true` (Chatfront) there are no plans: every feature is on.

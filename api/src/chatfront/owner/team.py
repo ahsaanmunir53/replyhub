@@ -26,11 +26,13 @@ from chatfront.core.models import Customer, Staff, StaffRole, Tenant
 from chatfront.core.phone import hash_phone
 from chatfront.delivery.address import local_phone
 from chatfront.owner.rights import Can, rights
-from chatfront.owner.routes import ServicesDep, needs, needs_recent
+from chatfront.owner.routes import ServicesDep, needs, needs_feature, needs_recent
 from chatfront.owner.sessions import OwnerSession, console_link, issue
+from chatfront.owner.subscription import Feature
 from chatfront.services import Services
 
 router = APIRouter(prefix="/api/owner")
+TEAM_PLAN = needs_feature(Feature.TEAM)  # staff logins come with the Business plan
 TeamDep = Annotated[OwnerSession, needs(Can.TEAM)]
 RecentTeamDep = Annotated[OwnerSession, needs_recent(Can.TEAM)]
 AuditDep = Annotated[OwnerSession, needs(Can.AUDIT)]
@@ -129,14 +131,14 @@ async def sign_out_all(session: TeamDep, services: ServicesDep) -> dict[str, boo
     return {"signed_out": True}
 
 
-@router.get("/team")
+@router.get("/team", dependencies=[TEAM_PLAN])
 async def team(session: TeamDep, services: ServicesDep) -> list[Member]:
     async with services.db.tenant(session.tenant_id) as db:
         staff = await db.scalars(select(Staff).order_by(Staff.created_at))
         return [_member(member) for member in staff]
 
 
-@router.post("/team")
+@router.post("/team", dependencies=[TEAM_PLAN])
 async def add_member(body: NewMember, session: RecentTeamDep, services: ServicesDep) -> Invite:
     if body.role == StaffRole.OWNER:
         raise AppError("one_owner", "A shop has one owner; pick another role")
@@ -189,7 +191,7 @@ async def _other_member(db: AsyncSession, session: OwnerSession, staff_id: uuid.
     return staff
 
 
-@router.post("/team/{staff_id}/link")
+@router.post("/team/{staff_id}/link", dependencies=[TEAM_PLAN])
 async def new_link(staff_id: uuid.UUID, session: RecentTeamDep, services: ServicesDep) -> Invite:
     """A fresh sign-in link for someone who lost theirs."""
     async with services.db.tenant(session.tenant_id) as db:
@@ -201,7 +203,7 @@ async def new_link(staff_id: uuid.UUID, session: RecentTeamDep, services: Servic
     return Invite(member=member, link=_link(services, staff))
 
 
-@router.post("/team/{staff_id}/deactivate")
+@router.post("/team/{staff_id}/deactivate", dependencies=[TEAM_PLAN])
 async def remove_member(
     staff_id: uuid.UUID, session: RecentTeamDep, services: ServicesDep
 ) -> Member:

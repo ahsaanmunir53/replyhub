@@ -2035,5 +2035,9 @@
   "rules.add_faq": "सवाल जोड़ें",
   "rules.remove": "हटाएँ",
   "rules.save": "नियम सेव करें",
-  "rules.failed": "सेव नहीं हुआ। देखें कि हर सवाल का जवाब लिखा हो।"
+  "rules.failed": "सेव नहीं हुआ। देखें कि हर सवाल का जवाब लिखा हो।",
+  "plan.current": "आपका प्लान: {plan}",
+  "plan.basic": "बेसिक",
+  "plan.pro": "प्रो",
+  "plan.business": "बिज़नेस"
 }

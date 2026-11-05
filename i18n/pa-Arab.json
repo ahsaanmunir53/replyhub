@@ -2035,5 +2035,9 @@
   "rules.add_faq": "سوال پاؤ",
   "rules.remove": "ہٹاؤ",
   "rules.save": "اصول سانبھو",
-  "rules.failed": "سانبھیا نہیں گیا۔ ویکھو پئی ہر سوال دا جواب لکھیا ہووے۔"
+  "rules.failed": "سانبھیا نہیں گیا۔ ویکھو پئی ہر سوال دا جواب لکھیا ہووے۔",
+  "plan.current": "تہاڈا پلان: {plan}",
+  "plan.basic": "بیسک",
+  "plan.pro": "پرو",
+  "plan.business": "بزنس"
 }

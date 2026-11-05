@@ -2035,5 +2035,9 @@
   "rules.add_faq": "سوال شامل ڪريو",
   "rules.remove": "هٽايو",
   "rules.save": "اصول محفوظ ڪريو",
-  "rules.failed": "محفوظ نه ٿيو. ڏسو ته هر سوال جو جواب لکيل هجي."
+  "rules.failed": "محفوظ نه ٿيو. ڏسو ته هر سوال جو جواب لکيل هجي.",
+  "plan.current": "توهان جو پلان: {plan}",
+  "plan.basic": "بيسڪ",
+  "plan.pro": "پرو",
+  "plan.business": "بزنس"
 }

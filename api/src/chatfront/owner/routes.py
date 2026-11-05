@@ -33,6 +33,7 @@ from chatfront.core.models import Staff, Tenant
 from chatfront.owner.rights import Can, rights
 from chatfront.owner.sandbox import copy_demo_shop
 from chatfront.owner.sessions import NotSignedIn, OwnerSession, require_recent, verify
+from chatfront.owner.subscription import Feature, Plan, features_of, plan_of
 from chatfront.services import Services, get_services
 
 router = APIRouter(prefix="/api/owner")
@@ -103,6 +104,21 @@ def needs_recent(right: Can) -> Any:
     return Depends(check)
 
 
+def needs_feature(feature: Feature) -> Any:
+    """A signed-in staff member of a business whose plan includes this (ReplyHub plans)."""
+
+    async def check(session: OwnerDep, services: ServicesDep) -> OwnerSession:
+        async with services.db.tenant(session.tenant_id) as db:
+            tenant = await db.get(Tenant, session.tenant_id)
+        if tenant is None:
+            raise NotSignedIn
+        if feature not in features_of(tenant, commerce=services.settings.commerce):
+            raise Forbidden("Your plan does not include this")
+        return session
+
+    return Depends(check)
+
+
 ChatsDep = Annotated[OwnerSession, needs(Can.CHATS)]
 
 
@@ -129,6 +145,8 @@ class Me(BaseModel):
     role: str
     rights: list[str]
     is_platform: bool = False  # Chatfront's own staff, who review fraud reports (feature 37)
+    plan: str = Plan.BUSINESS.value  # ReplyHub: what the business pays for
+    features: list[str] = Field(default_factory=list)
 
 
 class OwnerVariant(BaseModel):
@@ -189,6 +207,8 @@ async def me(session: StaffDep, services: ServicesDep) -> Me:
         role=staff.role,
         rights=sorted(rights(staff.role)),
         is_platform=tenant.is_platform,
+        plan=plan_of(tenant).value,
+        features=sorted(features_of(tenant, commerce=services.settings.commerce)),
     )
 
 

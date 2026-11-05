@@ -2035,5 +2035,9 @@
   "rules.add_faq": "Sawal shamil karein",
   "rules.remove": "Hatayein",
   "rules.save": "Rules save karein",
-  "rules.failed": "Save nahi hua. Dekhein ke har sawal ka jawab likha ho."
+  "rules.failed": "Save nahi hua. Dekhein ke har sawal ka jawab likha ho.",
+  "plan.current": "Aap ka plan: {plan}",
+  "plan.basic": "Basic",
+  "plan.pro": "Pro",
+  "plan.business": "Business"
 }

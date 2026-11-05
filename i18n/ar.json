@@ -2035,5 +2035,9 @@
   "rules.add_faq": "أضف سؤالًا",
   "rules.remove": "احذف",
   "rules.save": "احفظ القواعد",
-  "rules.failed": "لم يتم الحفظ. تأكد أن لكل سؤال جوابًا."
+  "rules.failed": "لم يتم الحفظ. تأكد أن لكل سؤال جوابًا.",
+  "plan.current": "باقتك: {plan}",
+  "plan.basic": "الأساسية",
+  "plan.pro": "الاحترافية",
+  "plan.business": "الأعمال"
 }

@@ -2035,5 +2035,9 @@
   "rules.add_faq": "سوال شامل کریں",
   "rules.remove": "ہٹائیں",
   "rules.save": "اصول محفوظ کریں",
-  "rules.failed": "محفوظ نہیں ہوا۔ دیکھیں کہ ہر سوال کا جواب لکھا ہو۔"
+  "rules.failed": "محفوظ نہیں ہوا۔ دیکھیں کہ ہر سوال کا جواب لکھا ہو۔",
+  "plan.current": "آپ کا پلان: {plan}",
+  "plan.basic": "بیسک",
+  "plan.pro": "پرو",
+  "plan.business": "بزنس"
 }

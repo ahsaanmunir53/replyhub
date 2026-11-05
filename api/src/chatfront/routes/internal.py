@@ -1,5 +1,5 @@
 """Health, the cron entry point for cron-job.org, the model endpoints' state and outage drill,
-and local media files."""
+local media files, and the operator setting a business's plan."""
 
 from __future__ import annotations
 
@@ -10,12 +10,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import select, text
 
+from chatfront.audit.service import Actor, ActorType, record
 from chatfront.core.clock import utcnow
 from chatfront.core.errors import Forbidden, NotFound
+from chatfront.core.models import Tenant
 from chatfront.jobs.cron import run_due, secret_matches
 from chatfront.media.storage import LocalStorage
+from chatfront.owner.subscription import PLAN_KEY, Plan
 from chatfront.services import Services, get_services
 
 router = APIRouter()
@@ -117,3 +120,30 @@ async def local_media(key: str, exp: int, sig: str, services: ServicesDep) -> Re
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+class PlanIn(BaseModel):
+    shop: str = Field(min_length=1, max_length=60)  # the business's slug
+    plan: Plan
+
+
+@router.post("/internal/plan")
+async def set_plan(
+    body: PlanIn, services: ServicesDep, secret: SecretHeader = None
+) -> dict[str, str]:
+    """The operator sets what a business pays for (ReplyHub plans); owners cannot."""
+    _check(services, secret)
+    async with services.db.system() as session:
+        tenant = await session.scalar(select(Tenant).where(Tenant.slug == body.shop))
+        if tenant is None:
+            raise NotFound("Shop")
+        tenant.profile = {**(tenant.profile or {}), PLAN_KEY: body.plan.value}
+        await record(
+            session,
+            tenant.id,
+            Actor(ActorType.SYSTEM, "operator"),
+            "settings.plan",
+            entity=("tenant", str(tenant.id)),
+            data={"plan": body.plan.value},
+        )
+    return {"shop": body.shop, "plan": body.plan.value}

@@ -27,10 +27,11 @@ from chatfront.channels.models import (
 from chatfront.channels.types import Kind
 from chatfront.channels.webchat import ChatIdentity, accept_web
 from chatfront.core.errors import AppError, Forbidden, NotFound
-from chatfront.core.models import Staff
+from chatfront.core.models import Staff, Tenant
 from chatfront.core.phone import hash_phone
 from chatfront.media import service as media_service
 from chatfront.media.models import Media, MediaKind
+from chatfront.owner import subscription
 from chatfront.owner.sessions import NotSignedIn, verify
 from chatfront.services import Services, get_services
 
@@ -63,6 +64,17 @@ _WEBHOOK_OBJECTS = {
     "instagram": Channel.INSTAGRAM,
     "page": Channel.MESSENGER,
 }
+
+
+async def _plan_answers(services: Services, tenant_id: uuid.UUID, channel: str) -> bool:
+    """Instagram and Messenger are answered only when the business's plan includes them."""
+    if channel not in subscription.CHANNEL_FEATURES or services.settings.commerce:
+        return True
+    async with services.db.tenant(tenant_id) as db:
+        tenant = await db.get(Tenant, tenant_id)
+    return tenant is not None and subscription.answers_channel(
+        tenant, channel, commerce=services.settings.commerce
+    )
 
 
 def _signed_by_us(services: Services, raw: bytes, signature: str | None) -> bool:
@@ -121,6 +133,9 @@ async def meta_webhook(
         account = await channels.route(services.db, channel, message.account_external_id)
         if account is None:
             log.warning("message for an unknown %s account; ignored", channel)
+            continue
+        if not await _plan_answers(services, account.tenant_id, channel):
+            log.info("%s is not in this business's plan; message ignored", channel)
             continue
         await channels.accept(services.db, account, message, services.keys)
     await channels.apply_statuses(services.db, statuses)

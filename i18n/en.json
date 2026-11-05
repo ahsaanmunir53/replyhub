@@ -2035,5 +2035,9 @@
   "rules.add_faq": "Add a question",
   "rules.remove": "Remove",
   "rules.save": "Save rules",
-  "rules.failed": "Could not save. Check that every question has an answer."
+  "rules.failed": "Could not save. Check that every question has an answer.",
+  "plan.current": "Your plan: {plan}",
+  "plan.basic": "Basic",
+  "plan.pro": "Pro",
+  "plan.business": "Business"
 }
