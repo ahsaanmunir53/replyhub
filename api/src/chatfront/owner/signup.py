@@ -9,11 +9,14 @@ operator can close sign-ups with SIGNUP_OPEN=false.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 
+from chatfront.core.clock import utcnow
 from chatfront.core.countries import get_pack
 from chatfront.core.errors import AppError, Forbidden
 from chatfront.core.models import Tenant, Tier
@@ -25,6 +28,7 @@ from chatfront.owner.subscription import PLAN_KEY, Plan
 from chatfront.templates import all_templates
 
 router = APIRouter(prefix="/api/signup")
+SIGNED_UP = "signed_up"  # made by the public form, counted against SIGNUPS_PER_DAY
 COUNTRIES = ("AE", "SA", "PK", "IN", "BD")  # where ReplyHub is offered first
 LANGS = ("en", "ar", "ur-Latn", "ur", "hi", "bn", "pa-Arab", "sd", "ps")
 Country = Literal["AE", "SA", "PK", "IN", "BD"]
@@ -75,6 +79,17 @@ async def sign_up(body: SignupIn, request: Request, services: ServicesDep) -> Si
         raise Forbidden("Sign-ups are closed for now")
     client = request.client.host if request.client else "unknown"
     services.limiter.check(f"signup:{client}")
+    async with services.db.system() as session:
+        today = await session.scalar(
+            select(func.count(Tenant.id)).where(
+                Tenant.created_at >= utcnow() - timedelta(days=1),
+                Tenant.profile[SIGNED_UP].as_boolean().is_(True),
+            )
+        )
+    if (today or 0) >= services.settings.signups_per_day:
+        raise AppError(
+            "signups_full", "Too many sign-ups today. Try again tomorrow.", status_code=429
+        )
     if body.business_type not in all_templates():
         raise AppError("unknown_type", "Choose one of the listed kinds of business")
     pack = get_pack(body.country)
@@ -96,7 +111,11 @@ async def sign_up(body: SignupIn, request: Request, services: ServicesDep) -> Si
             tier=Tier.SMALL,
             owner_name=" ".join(body.owner_name.split()),
             owner_email=str(body.email),
-            profile={"city": " ".join(body.city.split()), PLAN_KEY: Plan.BASIC.value},
+            profile={
+                "city": " ".join(body.city.split()),
+                PLAN_KEY: Plan.BASIC.value,
+                SIGNED_UP: True,
+            },
             owner_phone_hash=hash_phone(number, services.keys.phone_hash_key),
         ),
     )

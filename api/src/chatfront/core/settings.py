@@ -31,6 +31,8 @@ class Settings(BaseSettings):
 
     # Secrets used to sign and hash. They must be long random strings in production.
     secret_key: SecretStr = SecretStr("dev-only-secret-key-change-me-0000000000")
+    # While rotating SECRET_KEY: the old key, so secrets sealed with it still open (core.reseal).
+    secret_key_previous: SecretStr | None = None
     phone_hash_key: SecretStr = SecretStr("dev-only-phone-hash-key-change-me-00000")
     cron_secret: SecretStr = SecretStr("dev-only-cron-secret")
 
@@ -52,6 +54,10 @@ class Settings(BaseSettings):
     commerce: bool = False
     # ReplyHub: anyone may sign a business up on the web (Basic plan); false closes the form.
     signup_open: bool = True
+    signups_per_day: int = 20  # new businesses a day across the app, against fake sign-ups
+    # Replies a day for a business whose WhatsApp the operator has not connected yet (the web
+    # chat trial), so an unchecked sign-up cannot run up the model bill.
+    trial_replies_per_day: int = 30
     # Shops whose owner console link is printed in the logs at start (12 hours), for hosts
     # without a shell: slugs separated by ",". Remove once signed in.
     owner_link_shops: str = ""

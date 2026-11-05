@@ -14,7 +14,8 @@ from chatfront.core.i18n import t
 from chatfront.core.models import Staff, Tenant
 from chatfront.core.phone import hash_phone
 from chatfront.services import Services
-from tests.integration.chat import Client, signed, wa_message
+from tests.integration.chat import Client, customer, last, said, say, signed, wa_message
+from tests.integration.conftest import SHOP
 from tests.integration.test_books_shield import LANG, drain, graph_mock, owner_on_whatsapp, texts
 
 CRON = {"X-Cron-Secret": "test-cron-secret"}
@@ -124,3 +125,29 @@ async def test_the_owner_gets_a_sign_in_link_on_whatsapp_on_any_plan(
     link = next(word for word in reply.split() if "/owner#t=" in word)
     assert "/owner#t=" in reply
     assert reply == t("owner.sign_in_link", LANG, link=link)
+
+
+async def test_sign_ups_a_day_are_capped(
+    replyhub: tuple[Client, Services], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, services = replyhub
+    monkeypatch.setattr(services.settings, "signups_per_day", 1)
+    assert (await client.post("/api/signup", json=FORM)).status_code == 200
+    full = await client.post("/api/signup", json={**FORM, "business_name": "Second Shop"})
+    assert full.status_code == 429
+
+
+async def test_an_unconnected_business_gets_a_few_replies_a_day(
+    replyhub: tuple[Client, Services], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Until the operator connects its WhatsApp, a business's web chat answers a few times a
+    day, so a fake sign-up cannot run up the model bill; after that, no cap."""
+    client, services = replyhub
+    monkeypatch.setattr(services.settings, "trial_replies_per_day", 0)
+    guest, token = await customer(client, SHOP)
+    reply = last(await say(client, services, SHOP, guest, "price?", token=token))
+    assert reply["body"] in said("reply.trial_limit")
+    connect = {"shop": SHOP, "channel": "whatsapp", "account_id": "PN-T", "handle": "+923001112223"}
+    assert (await client.post("/internal/connect", headers=CRON, json=connect)).status_code == 200
+    reply = last(await say(client, services, SHOP, guest, "price?", token=token))
+    assert reply["body"] not in said("reply.trial_limit")

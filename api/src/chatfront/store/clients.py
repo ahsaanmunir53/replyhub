@@ -9,11 +9,13 @@ import asyncio
 import ipaddress
 import re
 import socket
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
+import httpcore
 import httpx
 
 from chatfront.core.errors import AppError
@@ -76,6 +78,63 @@ async def check_public(url: str) -> None:
         address = ipaddress.ip_address(info[4][0])
         if not address.is_global:
             raise StoreError("The store address is not a public website")
+
+
+class PublicOnlyBackend(httpcore.AsyncNetworkBackend):
+    """Connects only to public addresses, checked at the moment of connecting, so a store
+    address that resolves to a public IP when saved and a private one later (DNS rebinding)
+    still cannot reach the server's own network. TLS still checks the store's own name."""
+
+    def __init__(self) -> None:
+        self._inner = httpcore.AnyIOBackend()
+
+    async def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,  # noqa: ASYNC109 - httpcore's interface
+        local_address: str | None = None,
+        socket_options: Iterable[Any] | None = None,
+    ) -> httpcore.AsyncNetworkStream:
+        loop = asyncio.get_running_loop()
+        try:
+            infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except OSError as exc:
+            raise httpcore.ConnectError(f"cannot resolve {host}") from exc
+        addresses = [str(info[4][0]) for info in infos]
+        if not addresses or not all(ipaddress.ip_address(a).is_global for a in addresses):
+            raise httpcore.ConnectError("the store address is not a public website")
+        return await self._inner.connect_tcp(
+            addresses[0], port, timeout, local_address, socket_options
+        )
+
+    async def connect_unix_socket(
+        self,
+        path: str,  # noqa: ARG002
+        timeout: float | None = None,  # noqa: ARG002, ASYNC109
+        socket_options: Iterable[Any] | None = None,  # noqa: ARG002
+    ) -> httpcore.AsyncNetworkStream:
+        raise httpcore.ConnectError("unix sockets are not stores")
+
+    async def sleep(self, seconds: float) -> None:
+        await self._inner.sleep(seconds)
+
+
+def store_client() -> httpx.AsyncClient:
+    """The client for reading stores: public addresses only, no proxy from the environment,
+    short timeouts, and no redirects (a redirect could point anywhere)."""
+    transport = httpx.AsyncHTTPTransport(trust_env=False, retries=0)
+    transport._pool = httpcore.AsyncConnectionPool(
+        ssl_context=httpx.create_ssl_context(),
+        max_connections=10,
+        network_backend=PublicOnlyBackend(),
+    )
+    return httpx.AsyncClient(
+        transport=transport,
+        timeout=httpx.Timeout(20.0, connect=10.0),
+        follow_redirects=False,
+        trust_env=False,
+    )
 
 
 def _when(value: str) -> datetime:
@@ -174,6 +233,8 @@ async def fetch_orders(
                 )
                 found += [shopify_order(o, digits) for o in response.json().get("orders", [])]
                 next_url = response.links.get("next", {}).get("url")
+                if next_url and urlsplit(next_url).hostname != urlsplit(url).hostname:
+                    raise StoreError("The store sent a next page on another address")
                 params = {}  # the next link carries them
             return found
         auth = httpx.BasicAuth(key, secret or "").auth_flow(httpx.Request("GET", url))

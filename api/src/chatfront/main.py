@@ -28,6 +28,7 @@ from chatfront.channels.lead_routes import router as leads_router
 from chatfront.channels.routes import router as channel_router
 from chatfront.core.errors import NotFound, install_error_handlers
 from chatfront.core.logging import setup_logging
+from chatfront.core.secretbox import remember_previous
 from chatfront.core.settings import Settings, get_settings
 from chatfront.crm.broadcast_routes import router as broadcasts_router
 from chatfront.crm.routes import router as crm_router
@@ -98,6 +99,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     settings.require_production_secrets()
     setup_logging(settings.log_level)
+    previous = settings.secret_key_previous
+    remember_previous([previous.get_secret_value()] if previous else [])
     registries = build_registries()
 
     @asynccontextmanager

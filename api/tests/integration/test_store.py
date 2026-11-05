@@ -13,6 +13,8 @@ import respx
 from sqlalchemy import select
 
 from chatfront.core.i18n import t
+from chatfront.core.reseal import reseal
+from chatfront.core.secretbox import remember_previous, unseal
 from chatfront.jobs.queue import enqueue
 from chatfront.services import Services
 from chatfront.store import clients, routes, service
@@ -171,3 +173,23 @@ async def test_basic_owner_commands_on_whatsapp_point_to_pro(pro: tuple[Client, 
         await owner_on_whatsapp(client, services, number)
         replies = [m["text"]["body"] for m in texts(graph) if m["type"] == "text"]
     assert replies[-1] == t("plan.no_owner_whatsapp", LANG)
+
+
+async def test_resealing_after_a_key_rotation(pro: tuple[Client, Services]) -> None:
+    """The store key, sealed with the old SECRET_KEY, opens with the new one after reseal."""
+    client, services = pro
+    await set_plan(client, "pro")
+    owner = await owner_auth(services)
+    body = {"platform": "shopify", "store_url": "gulmohar.myshopify.com", "key": KEY}
+    assert (await client.put("/api/owner/store", headers=owner, json=body)).status_code == 200
+    old = services.settings.secret_key.get_secret_value()
+    new = "rotated-secret-key-" + "z" * 32
+    remember_previous([old])
+    try:
+        assert await reseal(services.db, new) >= 1
+    finally:
+        remember_previous([])
+    async with services.db.system() as session:
+        link = await session.scalar(select(StoreConnection))
+    assert link is not None
+    assert unseal(link.key_sealed, new) == KEY

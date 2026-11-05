@@ -14,6 +14,7 @@ from enum import StrEnum
 from chatfront.core.models import Tenant
 
 PLAN_KEY = "plan"
+VERIFIED = "verified"  # the operator connected the business's WhatsApp: past the trial
 
 
 class Plan(StrEnum):

@@ -19,7 +19,7 @@ from chatfront.core.errors import Forbidden, NotFound
 from chatfront.core.models import Tenant
 from chatfront.jobs.cron import run_due, secret_matches
 from chatfront.media.storage import LocalStorage
-from chatfront.owner.subscription import PLAN_KEY, Plan
+from chatfront.owner.subscription import PLAN_KEY, VERIFIED, Plan
 from chatfront.services import Services, get_services
 
 router = APIRouter()
@@ -174,4 +174,9 @@ async def connect_account(
         handle=body.handle,
         token=body.token,
     )
+    if body.channel == "whatsapp":  # the operator has checked the business: no more trial cap
+        async with services.db.system() as session:
+            tenant = await session.get(Tenant, account.tenant_id)
+            if tenant is not None:
+                tenant.profile = {**(tenant.profile or {}), VERIFIED: True}
     return {"shop": body.shop, "channel": body.channel, "display": account.display or ""}

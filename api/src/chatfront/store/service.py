@@ -30,7 +30,7 @@ from chatfront.jobs.cron import Periodic
 from chatfront.jobs.queue import JobContext, enqueue
 from chatfront.owner.subscription import Feature, features_of
 from chatfront.stock import notices
-from chatfront.store.clients import fetch_orders
+from chatfront.store.clients import fetch_orders, store_client
 from chatfront.store.models import StoreConnection, StoreOrder
 
 if TYPE_CHECKING:
@@ -99,9 +99,8 @@ async def sync(services: Deps, tenant_id: uuid.UUID) -> int:
         since = (link.synced_at - OVERLAP) if link.synced_at else started - FIRST_READ
         digits = get_pack(tenant.country).minor_digits
     try:
-        orders = await fetch_orders(
-            services.http, platform, url, key, consumer_secret, since, digits
-        )
+        async with store_client() as http:
+            orders = await fetch_orders(http, platform, url, key, consumer_secret, since, digits)
     except AppError as exc:
         async with services.db.tenant(tenant_id) as session:
             link = await session.scalar(select(StoreConnection))

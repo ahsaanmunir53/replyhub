@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import httpcore
 import pytest
 
 from chatfront.store import clients
@@ -62,3 +63,11 @@ def test_woocommerce_orders() -> None:
 )
 def test_what_the_owner_asks(text: str, asked: str | None) -> None:
     assert asks(text) == asked
+
+
+async def test_reading_a_store_never_connects_to_a_private_address() -> None:
+    """Checked when connecting, not only when saving: DNS rebinding cannot reach inside."""
+    backend = clients.PublicOnlyBackend()
+    for host in ("127.0.0.1", "10.0.0.5", "169.254.169.254", "localhost"):
+        with pytest.raises(httpcore.ConnectError):
+            await backend.connect_tcp(host, 443)

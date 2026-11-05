@@ -14,9 +14,10 @@ import json
 import logging
 import uuid
 from dataclasses import replace
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chatfront.ai.client import ModelUnavailable
@@ -41,7 +42,7 @@ from chatfront.channels.conversation import (
 )
 from chatfront.channels.handover import HANDOVER, start_handover
 from chatfront.channels.language import reply_language
-from chatfront.channels.models import Channel, Conversation, SocialPost
+from chatfront.channels.models import Channel, Conversation, Direction, Message, SocialPost
 from chatfront.channels.notify import send_to
 from chatfront.channels.types import Kind, Outbound, OutImage, OutText
 from chatfront.core.clock import utcnow
@@ -68,7 +69,7 @@ from chatfront.orders.tools import (
     AgentContext,
     accepted_methods,
 )
-from chatfront.owner import actions
+from chatfront.owner import actions, subscription
 from chatfront.owner.models import ActionStatus, PendingAction
 from chatfront.payments.claims import handle_screenshot
 from chatfront.payments.due import ask_for, start_payment
@@ -179,6 +180,8 @@ class OrderAgent:
             payment = await handle_screenshot(self.services, turn)
             if payment is not None:
                 return payment
+        if not selling and await self._over_trial(turn):
+            return [OutText(t("reply.trial_limit", turn.lang))]
         await self._take_pin(turn)
         ctx, request = await self._prepare(turn)
         try:
@@ -456,6 +459,19 @@ class OrderAgent:
                 session, turn.tenant, customer_id, conversation_id=turn.conversation.id
             )
             orders.set_pin(order, pin)
+
+    async def _over_trial(self, turn: Turn) -> bool:
+        """A business not yet checked by the operator gets a few replies a day (the trial)."""
+        if (turn.tenant.profile or {}).get(subscription.VERIFIED):
+            return False
+        async with self.services.db.tenant(turn.tenant.id) as session:
+            sent = await session.scalar(
+                select(func.count(Message.id)).where(
+                    Message.direction == Direction.OUT,
+                    Message.created_at >= utcnow() - timedelta(days=1),
+                )
+            )
+        return (sent or 0) >= self.services.settings.trial_replies_per_day
 
     async def _pass_notes(self, turn: Turn, ctx: AgentContext) -> None:
         """What the assistant passed to the owner while keeping the chat goes to the owner, in
