@@ -5,26 +5,31 @@ import type { FormEvent } from "react";
 import { api } from "../api";
 import type { OwnerProduct } from "../api";
 import { useLang } from "../lang";
+import { formatMoney } from "../money";
 
 type Line = { variant: string; quantity: number };
 const EMPTY = { name: "", phone: "", city: "", address: "", area: "" };
 
 export function PhoneOrderPanel({
   token,
+  country,
   products,
   onAdded,
 }: {
   token: string;
+  country: string;
   products: OwnerProduct[];
   onAdded: () => void;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const choices = products
     .filter((p) => p.status === "active")
     .flatMap((p) =>
       p.variants.map((v) => ({
         id: v.id,
-        label: [p.name, ...Object.values(v.options)].join(" · ") + ` (${v.price})`,
+        label:
+          [p.name, ...Object.values(v.options)].join(" · ") +
+          ` (${formatMoney(v.price, country, lang)})`,
       })),
     );
   const [lines, setLines] = useState<Line[]>([{ variant: "", quantity: 1 }]);

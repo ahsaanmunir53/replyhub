@@ -493,7 +493,12 @@ function Console({
       children: (
         <>
           {can("orders") && !COMMERCE && (
-            <PhoneOrderPanel token={token} products={products ?? []} onAdded={orders.refresh} />
+            <PhoneOrderPanel
+              token={token}
+              country={me.country}
+              products={products ?? []}
+              onAdded={orders.refresh}
+            />
           )}
           {can("orders") && (
             <OrdersPanel me={me} token={token} orders={orders.orders} onChange={orders.refresh} />

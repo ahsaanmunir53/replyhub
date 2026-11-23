@@ -52,7 +52,9 @@ export function ChatsBoard({ chats }: { chats: Chats }) {
     ["dash.t_handed", chats.handed_over],
     ["dash.t_waiting", chats.waiting],
   ];
-  const answered = chats.incoming ? Math.round((chats.assistant / chats.incoming) * 100) : 0;
+  const answered = chats.incoming
+    ? Math.min(100, Math.round((chats.assistant / chats.incoming) * 100))
+    : 0;
 
   return (
     <section className="chats-board" aria-labelledby="chats-board-title">
