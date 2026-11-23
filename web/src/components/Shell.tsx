@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BRAND } from "../config";
+import { BRAND, COMMERCE } from "../config";
 import { languageOf, statusOf, UI_LANGS } from "../i18n";
 import { useLang } from "../lang";
 import { readOwnerToken } from "../owner";
@@ -164,7 +164,7 @@ export function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <Wordmark />
-        <p className="footer-credit">{t("app.attribution")}</p>
+        {COMMERCE && <p className="footer-credit">{t("app.attribution")}</p>}
       </div>
     </footer>
   );

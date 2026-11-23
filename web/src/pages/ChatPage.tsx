@@ -1,3 +1,4 @@
+import { COMMERCE } from "../config";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ChatView } from "../components/ChatView";
 import { useLang } from "../lang";
@@ -24,7 +25,7 @@ export function ChatPage() {
         empty={t("chat.empty")}
         suggestions={SUGGESTIONS.map((key) => t(key))}
         initialDraft={search.get("ask") ?? ""}
-        footer={<p className="phone-credit">{t("app.attribution")}</p>}
+        footer={COMMERCE ? <p className="phone-credit">{t("app.attribution")}</p> : undefined}
       />
     </div>
   );
