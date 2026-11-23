@@ -53,6 +53,8 @@ services:
         sync: false
       - key: FIREWORKS_API_KEY
         sync: false
+      - key: CEREBRAS_API_KEY  # free model, high limits (cloud.cerebras.ai)
+        sync: false
       - key: GROQ_API_KEY  # free fallback model (console.groq.com)
         sync: false
       - key: MODAL_GLIMMER_BASE_URL

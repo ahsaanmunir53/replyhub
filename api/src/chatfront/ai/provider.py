@@ -69,6 +69,22 @@ def serialise_message(message: ChatMessage) -> dict[str, Any]:
     return out
 
 
+OPENAI_COMPATIBLE_FREE = frozenset({"groq", "cerebras"})
+
+
+def closed(schema: Any) -> Any:
+    """The schema with additionalProperties false on every object, which strict structured
+    output on Groq and others requires; the fields themselves are unchanged."""
+    if isinstance(schema, dict):
+        out = {key: closed(value) for key, value in schema.items()}
+        if out.get("type") == "object" or "properties" in out:
+            out["additionalProperties"] = False
+        return out
+    if isinstance(schema, list):
+        return [closed(item) for item in schema]
+    return schema
+
+
 def build_payload(
     endpoint: Endpoint, req: ChatRequest, effort: Effort, max_tokens: int
 ) -> dict[str, Any]:
@@ -76,11 +92,14 @@ def build_payload(
         "model": endpoint.model,
         "messages": [serialise_message(m) for m in req.messages],
         "max_tokens": max_tokens,
-        # gpt-oss on Groq takes low, medium and high only.
-        "reasoning_effort": (
-            "high" if endpoint.name == "groq" and effort == Effort.XHIGH else effort.value
-        ),
     }
+    if "gpt-oss" in endpoint.model or endpoint.name not in OPENAI_COMPATIBLE_FREE:
+        # gpt-oss on Groq takes low, medium and high only; other free models take none.
+        payload["reasoning_effort"] = (
+            "high"
+            if endpoint.name in OPENAI_COMPATIBLE_FREE and effort == Effort.XHIGH
+            else effort.value
+        )
     if req.tools:
         payload["tools"] = req.tools
         payload["tool_choice"] = "auto"
@@ -89,7 +108,7 @@ def build_payload(
             "type": "json_schema",
             "json_schema": {
                 "name": req.json_schema.name,
-                "schema": req.json_schema.schema,
+                "schema": closed(req.json_schema.schema),
                 "strict": True,
             },
         }

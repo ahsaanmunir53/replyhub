@@ -545,3 +545,30 @@ class TestTools:
         registry = self.registry()
         with pytest.raises(ValueError, match="twice"):
             registry.add(Tool("check_stock", "", self.Args, self.handler, "catalog"))
+
+
+def test_strict_schemas_close_every_object() -> None:
+    from chatfront.ai.provider import closed
+
+    schema = {
+        "type": "object",
+        "properties": {"a": {"type": "object", "properties": {"b": {"type": "string"}}}},
+        "$defs": {"X": {"properties": {"c": {"type": "integer"}}}},
+    }
+    out = closed(schema)
+    assert out["additionalProperties"] is False
+    assert out["properties"]["a"]["additionalProperties"] is False
+    assert out["$defs"]["X"]["additionalProperties"] is False
+    assert "additionalProperties" not in out["properties"]["a"]["properties"]["b"]
+
+
+def test_a_rate_limit_waits_as_asked_but_never_long() -> None:
+    import httpx
+
+    from chatfront.core.http import _retry_after
+
+    plain = httpx.Response(429)
+    assert _retry_after(plain, "Rate limit reached. Please try again in 2.5s.") == 2.5
+    assert _retry_after(plain, "Please try again in 1m30s.") == 8.0
+    assert _retry_after(httpx.Response(429, headers={"retry-after": "3"}), "") == 3.0
+    assert _retry_after(plain, "no hint") == 0.0

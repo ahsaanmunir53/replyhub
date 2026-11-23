@@ -141,6 +141,17 @@ def spark_endpoints(settings: Settings) -> list[Endpoint]:
                 *SPARK_OPEN_PRICE,
             )
         )
+    if key := _secret(settings.cerebras_api_key):  # free: high limits, before Groq's
+        endpoints.append(
+            Endpoint(
+                "cerebras",
+                settings.cerebras_base_url,
+                key,
+                settings.cerebras_model,
+                Decimal(0),
+                Decimal(0),
+            )
+        )
     if key := _secret(settings.groq_api_key):  # free plan: last, so credits go first
         endpoints.append(
             Endpoint(

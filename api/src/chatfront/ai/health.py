@@ -23,7 +23,7 @@ from chatfront.core.clock import utcnow
 
 REST_AFTER = 2  # failures in a row
 REST = timedelta(seconds=60)
-LASTING_REST = timedelta(minutes=30)
+LASTING_REST = timedelta(hours=3)  # a switched-off model or a bad key: not worth retrying soon
 MAX_DRILL = timedelta(minutes=30)
 
 

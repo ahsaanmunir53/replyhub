@@ -86,6 +86,23 @@ async def request(
         if not error.retryable or attempt >= retries:
             raise error
         delay = backoff_seconds * (2**attempt)
+        if error.status == 429:  # a rate limit says when to come back; wait that long, briefly
+            delay = max(delay, _retry_after(response, error.message))
         log.warning("%s failed (%s), retrying in %.1fs", service, error.message, delay)
         await asyncio.sleep(delay)
         attempt += 1
+
+
+_TRY_AGAIN = re.compile(r"try again in (?:(\d+)m)?([\d.]+)s", re.I)
+MAX_RATE_WAIT = 8.0  # longer than this, the next endpoint answers instead
+
+
+def _retry_after(response: httpx.Response, message: str) -> float:
+    """Seconds a rate-limited service asks to wait, from Retry-After or its message, capped."""
+    header = response.headers.get("retry-after", "")
+    try:
+        wait = float(header)
+    except ValueError:
+        found = _TRY_AGAIN.search(message)
+        wait = (int(found.group(1) or 0) * 60 + float(found.group(2))) if found else 0.0
+    return min(wait, MAX_RATE_WAIT)
