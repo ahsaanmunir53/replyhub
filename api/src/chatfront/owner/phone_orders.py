@@ -14,12 +14,15 @@ from typing import Annotated
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from chatfront.audit.service import Actor, ActorType, record
 from chatfront.catalog.service import load_items
+from chatfront.channels.models import Conversation, Party
 from chatfront.core.errors import AppError, NotFound
 from chatfront.core.models import Tenant
 from chatfront.orders.checkout import CheckoutIn, DetailsIn, LineIn, PlacedOut, place_from_page
+from chatfront.orders.models import Order
 from chatfront.owner.rights import Can
 from chatfront.owner.routes import ServicesDep, needs
 from chatfront.owner.sessions import OwnerSession
@@ -65,6 +68,15 @@ async def add_phone_order(body: PhoneOrder, session: OrdersDep, services: Servic
         ),
     )
     async with services.db.tenant(session.tenant_id) as db:
+        # The order's own record chat is no customer's chat: keep it out of the inbox.
+        order = await db.scalar(select(Order).where(Order.code == placed.code))
+        chat = (
+            await db.get(Conversation, order.conversation_id)
+            if order and order.conversation_id
+            else None
+        )
+        if chat is not None:
+            chat.party = Party.STAFF
         await record(
             db,
             session.tenant_id,

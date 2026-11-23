@@ -255,6 +255,8 @@ async def test_an_order_taken_on_the_phone_is_typed_in_and_joins_the_orders(
         order = await session.scalar(select(Order).where(Order.code == code))
     assert order is not None
     assert order.source == "phone"
+    # It is an order, not a chat: the inbox does not list it.
+    assert all(i["customer"] != "Hina Ahmed" for i in (await _inbox(client, owner))["items"])
 
 
 async def test_an_owner_adds_a_product_from_the_plain_form(app: tuple[Client, Services]) -> None:
