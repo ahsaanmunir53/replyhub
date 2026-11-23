@@ -77,6 +77,9 @@ class AgentContext:
     booking_flow_id: str = ""  # the published booking form, when there is one (feature 18)
     api_url: str = ""  # where this server answers, for links to files code makes (feature 44)
     link_secret: str = ""  # signs those links
+    # Chatfront holds an order with a vague address until a pin comes; ReplyHub asks for the pin
+    # but places the order without it, as many customers never send one.
+    pin_required: bool = True
     cards: list[Outbound] = field(default_factory=list)
     items: Sequence[CatalogItem] = ()  # the shop's catalog this turn, for pictures of named items
     added: set[uuid.UUID] = field(default_factory=set)  # variants added this turn
@@ -284,7 +287,7 @@ def _missing(ctx: AgentContext, cart: Order, lines: Sequence[OrderItem]) -> list
         missing.append("address")
     if ctx.channel == Channel.WEBCHAT and not address.get("phone"):
         missing.append("phone")  # on WhatsApp the number is already known
-    if orders.needs_pin(cart):
+    if ctx.pin_required and orders.needs_pin(cart):
         missing.append("location_pin")
     return missing
 
@@ -461,7 +464,11 @@ async def set_delivery_details(ctx: AgentContext, params: DeliveryDetails) -> di
     view = await cart_now(ctx)
     if pin_needed:
         ctx.cards.append(pin_request(ctx.channel, ctx.lang))
-        view["location_pin"] = "the address is too vague for a rider; a pin request was sent"
+        view["location_pin"] = (
+            "the address is too vague for a rider; a pin request was sent"
+            if ctx.pin_required
+            else "a pin would help the rider; it was asked for, but checkout does not wait for it"
+        )
     return view
 
 

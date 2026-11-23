@@ -357,6 +357,7 @@ class OrderAgent:
             api_url=services.settings.public_base_url.rstrip("/"),
             link_secret=services.settings.secret_key.get_secret_value(),
             items=items,
+            pin_required=services.settings.commerce,
         )
         prompt = load_prompt("order_agent" if self._sells(turn) else "reply_agent")
         system = prompt.render(
