@@ -102,6 +102,11 @@ class Settings(BaseSettings):
     fireworks_api_key: SecretStr | None = None
     fireworks_base_url: str = "https://api.fireworks.ai/inference/v1"
     spark_model_fireworks: str = "accounts/fireworks/models/muse-spark-open"
+    # Groq's free plan (no card): a free fallback when the Muse Spark hosts are down or out of
+    # credit. Its model is OpenAI's open-weight gpt-oss, not Muse Spark.
+    groq_api_key: SecretStr | None = None
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "openai/gpt-oss-120b"
     modal_spark_base_url: str | None = None
     modal_spark_api_key: SecretStr | None = None
     spark_model_modal: str = "muse-spark-open"

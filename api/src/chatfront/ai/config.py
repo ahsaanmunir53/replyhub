@@ -141,6 +141,17 @@ def spark_endpoints(settings: Settings) -> list[Endpoint]:
                 *SPARK_OPEN_PRICE,
             )
         )
+    if key := _secret(settings.groq_api_key):  # free plan: last, so credits go first
+        endpoints.append(
+            Endpoint(
+                "groq",
+                settings.groq_base_url,
+                key,
+                settings.groq_model,
+                Decimal(0),
+                Decimal(0),
+            )
+        )
     return endpoints
 
 

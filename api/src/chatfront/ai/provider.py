@@ -76,7 +76,10 @@ def build_payload(
         "model": endpoint.model,
         "messages": [serialise_message(m) for m in req.messages],
         "max_tokens": max_tokens,
-        "reasoning_effort": effort.value,
+        # gpt-oss on Groq takes low, medium and high only.
+        "reasoning_effort": (
+            "high" if endpoint.name == "groq" and effort == Effort.XHIGH else effort.value
+        ),
     }
     if req.tools:
         payload["tools"] = req.tools
