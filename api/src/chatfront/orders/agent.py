@@ -118,6 +118,24 @@ _INJECTION_NOTE = (
 
 # The modules that sell in the chat; off when the product only answers (settings.commerce).
 COMMERCE_MODULES = frozenset({"orders", "payments"})
+# The tools ReplyHub sends: products, the cart and the order, bookings, and a person.
+REPLYHUB_TOOLS = frozenset(
+    {
+        "find_products",
+        "view_cart",
+        "add_to_cart",
+        "update_cart",
+        "set_delivery_details",
+        "checkout",
+        "order_status",
+        "cancel_order",
+        "hand_over",
+        "tell_owner",
+        "find_times",
+        "my_bookings",
+        "cancel_booking",
+    }
+)
 NOTE_CHARS = 600
 
 _BUY_NOTE = (
@@ -192,6 +210,15 @@ class OrderAgent:
                     session, settings, turn.tenant, turn.conversation.id, model=used_model
                 )
         return replies
+
+    def _tools(self, modules: set[str]) -> list[dict[str, Any]]:
+        """Every tool with selling on (Chatfront). ReplyHub sends only what a chat that answers
+        and takes cash-on-delivery orders needs: each tool's description is sent with every
+        call, and on free model plans the tokens a minute run out fast."""
+        specs = self.services.registries.tools.specs(modules)
+        if self.services.settings.commerce:
+            return specs
+        return [spec for spec in specs if spec["function"]["name"] in REPLYHUB_TOOLS]
 
     def _sells(self, turn: Turn) -> bool:
         return sells(turn.tenant, commerce=self.services.settings.commerce)
@@ -306,7 +333,7 @@ class OrderAgent:
             ]
             shared = await shared_product(session, turn.message.payload)
         language = load_registry().get(turn.lang)
-        if self._sells(turn):
+        if services.settings.commerce:
             details = shop_details(tenant, items, notes)
         else:  # ReplyHub: the products and answers closest to the question, fewer tokens
             asked = turn.message.body or ""
@@ -357,7 +384,7 @@ class OrderAgent:
             messages=messages,
             tenant_id=tenant.id,
             prompt=prompt.ref,
-            tools=self.services.registries.tools.specs(modules),
+            tools=self._tools(modules),
             ref=("conversation", str(turn.conversation.id)),
             lang=language.tag,
         )
