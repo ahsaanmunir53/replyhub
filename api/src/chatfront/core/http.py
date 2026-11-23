@@ -24,9 +24,13 @@ def _detail(response: httpx.Response) -> str:
         body = response.json()
     except ValueError:
         return ""
-    error = body.get("error") if isinstance(body, dict) else None
-    if not isinstance(error, dict):
+    if not isinstance(body, dict):
         return ""
+    error = body.get("error")
+    if not isinstance(error, dict):  # OpenAI-style hosts: a string, or "detail"/"message"
+        text = error if isinstance(error, str) else body.get("detail") or body.get("message")
+        words = re.sub(r"\d{6,}", "#", str(text or ""))[:160]
+        return f" ({words})" if words else ""
     parts = [str(error.get(k)) for k in ("code", "error_subcode") if error.get(k) is not None]
     words = re.sub(r"\d{6,}", "#", str(error.get("message", "")))[:160]
     return f" ({'/'.join(parts)}: {words})" if parts or words else ""
