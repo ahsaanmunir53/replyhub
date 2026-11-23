@@ -117,7 +117,12 @@ class AiClient:
                 last_error = exc.message
                 self.health.failed(endpoint.name, exc.message)
                 await self._meter(req, endpoint, None, exc.message)
-                log.warning("%s failed for %s, trying the next endpoint", endpoint.name, req.role)
+                log.warning(
+                    "%s failed for %s (%s), trying the next endpoint",
+                    endpoint.name,
+                    req.role,
+                    exc.message[:200],
+                )
                 continue
             self.health.answered(endpoint.name)
             await self._meter(req, endpoint, result, None)
