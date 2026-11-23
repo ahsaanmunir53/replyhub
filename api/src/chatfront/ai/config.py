@@ -152,6 +152,17 @@ def spark_endpoints(settings: Settings) -> list[Endpoint]:
                 Decimal(0),
             )
         )
+    if key := _secret(settings.gemini_api_key):  # free plan with no card: Google AI Studio
+        endpoints.append(
+            Endpoint(
+                "gemini",
+                settings.gemini_base_url,
+                key,
+                settings.gemini_model,
+                Decimal(0),
+                Decimal(0),
+            )
+        )
     if key := _secret(settings.groq_api_key):  # free plan: last, so credits go first
         endpoints.append(
             Endpoint(

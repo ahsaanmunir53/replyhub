@@ -69,7 +69,7 @@ def serialise_message(message: ChatMessage) -> dict[str, Any]:
     return out
 
 
-OPENAI_COMPATIBLE_FREE = frozenset({"groq", "cerebras"})
+OPENAI_COMPATIBLE_FREE = frozenset({"groq", "cerebras", "gemini"})
 
 
 def closed(schema: Any) -> Any:
@@ -108,7 +108,11 @@ def build_payload(
             "type": "json_schema",
             "json_schema": {
                 "name": req.json_schema.name,
-                "schema": closed(req.json_schema.schema),
+                "schema": (
+                    closed(req.json_schema.schema)
+                    if endpoint.name in {"groq", "cerebras"}
+                    else req.json_schema.schema
+                ),
                 "strict": True,
             },
         }

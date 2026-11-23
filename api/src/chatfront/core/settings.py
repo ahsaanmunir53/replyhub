@@ -108,6 +108,10 @@ class Settings(BaseSettings):
     cerebras_api_key: SecretStr | None = None
     cerebras_base_url: str = "https://api.cerebras.ai/v1"
     cerebras_model: str = "qwen-3.8-27b"
+    # Google's Gemini API free tier (no card): OpenAI-compatible endpoint, tried before Groq.
+    gemini_api_key: SecretStr | None = None
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    gemini_model: str = "gemini-flash-latest"
     groq_api_key: SecretStr | None = None
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "openai/gpt-oss-120b"
