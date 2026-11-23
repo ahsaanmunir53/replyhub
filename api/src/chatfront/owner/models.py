@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import ForeignKey, Index, String
+from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from chatfront.core.db import Base, created_at_column, id_column
@@ -38,4 +38,22 @@ class PendingAction(Base):
     status: Mapped[str] = mapped_column(String(12), default=ActionStatus.COLLECTING)
     expires_at: Mapped[datetime]
     decided_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class AssistantUsage(Base):
+    """How many replies the assistant gave in one period: "trial" for the whole trial, or a
+    month ("2026-11") on a paid plan. One row per business and period, counted atomically."""
+
+    __tablename__ = "assistant_usage"
+    __table_args__ = (UniqueConstraint("tenant_id", "period"),)
+
+    id: Mapped[uuid.UUID] = id_column()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"))
+    period: Mapped[str] = mapped_column(String(7))
+    replies: Mapped[int] = mapped_column(Integer, default=0)
+    model_replies: Mapped[int] = mapped_column(Integer, default=0)  # the ones that used the model
+    chats: Mapped[list[Any]] = mapped_column(default=list)  # trial: the chats answered
+    warned: Mapped[bool] = mapped_column(default=False)  # the owner was told it is nearly used
+    stopped: Mapped[bool] = mapped_column(default=False)  # the owner was told it is used up
     created_at: Mapped[datetime] = created_at_column()

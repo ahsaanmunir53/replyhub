@@ -13,11 +13,11 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from contextvars import ContextVar
 from dataclasses import replace
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chatfront.ai.client import ModelUnavailable
@@ -42,7 +42,7 @@ from chatfront.channels.conversation import (
 )
 from chatfront.channels.handover import HANDOVER, start_handover
 from chatfront.channels.language import reply_language
-from chatfront.channels.models import Channel, Conversation, Direction, Message, SocialPost
+from chatfront.channels.models import Channel, Conversation, SocialPost
 from chatfront.channels.notify import send_to
 from chatfront.channels.types import Kind, Outbound, OutImage, OutText
 from chatfront.core.clock import utcnow
@@ -69,8 +69,9 @@ from chatfront.orders.tools import (
     AgentContext,
     accepted_methods,
 )
-from chatfront.owner import actions, subscription
+from chatfront.owner import actions, usage
 from chatfront.owner.models import ActionStatus, PendingAction
+from chatfront.owner.rules import content_words, quick_answer
 from chatfront.payments.claims import handle_screenshot
 from chatfront.payments.due import ask_for, start_payment
 from chatfront.shield import buyers, consent, guardian, phishing
@@ -86,6 +87,13 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 MAX_TOOL_ROUNDS = 5
+# ReplyHub sends this many products with each call, the closest to the question first; the
+# find_products tool reaches the rest.
+REPLY_CATALOG_LINES = 25
+# ReplyHub answers from the owner's rules with two tools at most; fewer rounds, fewer tokens.
+REPLY_TOOL_ROUNDS = 3
+# Whether this turn's answer used the model (counted apart from the owner's own answers).
+_USED_MODEL: ContextVar[bool] = ContextVar("used_model", default=False)
 # Orders a shared pin can still go on: the cart, and placed orders not yet handed to a rider.
 _PIN_STATES = (
     OrderStatus.CART,
@@ -134,6 +142,20 @@ async def shared_product(session: AsyncSession, payload: dict[str, Any] | None) 
     )
 
 
+def ranked(items: list[CatalogItem], asked: str) -> list[CatalogItem]:
+    """Products whose name or category shares words with the question first, in catalog
+    order otherwise."""
+    words = content_words(asked)
+    if not words:
+        return items
+
+    def shared(item: CatalogItem) -> int:
+        product = item.product
+        return len(words & content_words(f"{product.name} {product.category or ''}"))
+
+    return [item for _, item in sorted(enumerate(items), key=lambda p: (-shared(p[1]), p[0]))]
+
+
 class OrderAgent:
     def __init__(self, services: Services) -> None:
         self.services = services
@@ -147,6 +169,30 @@ class OrderAgent:
             offers = consent.said(turn.message.body)
         if offers is not None:
             return await self._offers(turn, offers, via="button" if tapped else "chat")
+        if self.services.settings.commerce:
+            return await self._answer(turn, tapped)
+        # ReplyHub: the plan decides whether the assistant may answer, and every answer counts.
+        settings = self.services.settings
+        async with self.services.db.tenant(turn.tenant.id) as session:
+            stand = await usage.standing(session, settings, turn.tenant, turn.conversation.id)
+            if stand.stop is not None:
+                await usage.stopped(session, turn.tenant, stand.stop)
+        if stand.stop is not None:
+            return [OutText(t("reply.trial_limit", turn.lang))]
+        token = _USED_MODEL.set(False)
+        try:
+            replies = await self._answer(turn, tapped)
+            used_model = _USED_MODEL.get()
+        finally:
+            _USED_MODEL.reset(token)
+        if replies:
+            async with self.services.db.tenant(turn.tenant.id) as session:
+                await usage.count(
+                    session, settings, turn.tenant, turn.conversation.id, model=used_model
+                )
+        return replies
+
+    async def _answer(self, turn: Turn, tapped: str | None) -> list[Outbound]:
         live = await self._live_sale(turn, tapped)
         if live is not None:
             return live
@@ -180,8 +226,8 @@ class OrderAgent:
             payment = await handle_screenshot(self.services, turn)
             if payment is not None:
                 return payment
-        if not selling and await self._over_trial(turn):
-            return [OutText(t("reply.trial_limit", turn.lang))]
+        if not selling and (quick := quick_answer(turn.tenant, turn.message, turn.lang)):
+            return [OutText(quick)]  # the owner's own answer, or a thank-you: no model needed
         await self._take_pin(turn)
         ctx, request = await self._prepare(turn)
         try:
@@ -252,7 +298,13 @@ class OrderAgent:
             ]
             shared = await shared_product(session, turn.message.payload)
         language = load_registry().get(turn.lang)
-        details = shop_details(tenant, items, notes)
+        if services.settings.commerce:
+            details = shop_details(tenant, items, notes)
+        else:  # ReplyHub: the products and answers closest to the question, fewer tokens
+            asked = turn.message.body or ""
+            details = shop_details(
+                tenant, ranked(items, asked), notes, asked=asked, lines_cap=REPLY_CATALOG_LINES
+            )
         facts = self._facts(turn, items, details)
         ctx = AgentContext(
             db=services.db,
@@ -322,7 +374,9 @@ class OrderAgent:
         """Let the model call tools for a few rounds; its last words are the answer."""
         tools = self.services.registries.tools
         messages = list(request.messages)
-        for _ in range(MAX_TOOL_ROUNDS):
+        rounds = MAX_TOOL_ROUNDS if self.services.settings.commerce else REPLY_TOOL_ROUNDS
+        _USED_MODEL.set(True)
+        for _ in range(rounds):
             result = await self.services.ai.complete(replace(request, messages=list(messages)))
             if not result.tool_calls:
                 return (result.content or "").strip()
@@ -459,19 +513,6 @@ class OrderAgent:
                 session, turn.tenant, customer_id, conversation_id=turn.conversation.id
             )
             orders.set_pin(order, pin)
-
-    async def _over_trial(self, turn: Turn) -> bool:
-        """A business not yet checked by the operator gets a few replies a day (the trial)."""
-        if (turn.tenant.profile or {}).get(subscription.VERIFIED):
-            return False
-        async with self.services.db.tenant(turn.tenant.id) as session:
-            sent = await session.scalar(
-                select(func.count(Message.id)).where(
-                    Message.direction == Direction.OUT,
-                    Message.created_at >= utcnow() - timedelta(days=1),
-                )
-            )
-        return (sent or 0) >= self.services.settings.trial_replies_per_day
 
     async def _pass_notes(self, turn: Turn, ctx: AgentContext) -> None:
         """What the assistant passed to the owner while keeping the chat goes to the owner, in

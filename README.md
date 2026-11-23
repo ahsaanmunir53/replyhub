@@ -398,23 +398,43 @@ shops.
   settle the ledger. This is a provider-neutral verification hook—not a hosted checkout or payout
   integration—so seller payout remains pending until a real payout adapter is configured.
 
-## ReplyHub plans
+## ReplyHub plans and the trial
 
 With `COMMERCE=false` (ReplyHub), each business is on a plan, and the console and the API
 show only what it includes:
 
-| Plan | Features |
-|---|---|
-| Basic | The assistant on WhatsApp and the website chat, answering by the owner's rules |
-| Pro | Basic, plus the shared inbox, the owner's WhatsApp commands and the website reports |
-| Business | Pro, plus staff logins, broadcasts, and Instagram and Messenger |
+| Plan | Features | Assistant replies a month |
+|---|---|---|
+| Trial | The assistant, the rules and the inbox, for one chat | `TRIAL_REPLIES` in all (15) |
+| Basic | The assistant on WhatsApp and the website chat, answering by the owner's rules | 1,500 |
+| Pro | Basic, plus the shared inbox, the owner's WhatsApp commands and the website reports | 4,000 |
+| Business | Pro, plus staff logins, broadcasts, and Instagram and Messenger | 10,000 |
 
-A new business starts on Basic. The operator sets the plan after payment:
+A new business starts on the **trial**: the assistant answers `TRIAL_CHATS` chat(s) (1),
+`TRIAL_REPLIES` times in all (15), for `TRIAL_DAYS` days (7). Then customers are told the team
+will reply, the chat waits in the inbox, and the owner gets one notice to pick a plan. The
+allowances come from `PLAN_REPLIES`; past a month's allowance, or 3 days after `paid_until`,
+the assistant stops the same way. The owner is warned at 80% of the month.
+
+The console's plan panel shows usage, the three plans with prices (`PLAN_PRICES`, shown as
+written) and a "Choose" button. Choosing records a request; with `SALES_WHATSAPP` set the owner
+also gets a WhatsApp link to you. The app takes no money. You see requests and set the plan
+once paid:
 
 ```
+curl https://<api>/internal/plan-requests -H "X-Cron-Secret: $CRON_SECRET"
 curl -X POST https://<api>/internal/plan -H "X-Cron-Secret: $CRON_SECRET" \
-  -H 'content-type: application/json' -d '{"shop":"<slug>","plan":"pro"}'
+  -H 'content-type: application/json' -d '{"shop":"<slug>","plan":"pro","months":1}'
 ```
+
+`months` adds 30 days per month to the current end (paying early loses nothing); leave it out
+to change the plan without a payment. Demo shops are never limited.
+
+**Fewer model calls, same answers:** a customer question that clearly matches one of the
+owner's own questions gets the owner's answer word for word, and a plain "thanks" gets a
+thank-you, both without the model. Several quick messages get one answer. Each model call
+carries the 25 products and the owner's answers closest to the question (the rest are a tool
+call away), earlier messages cut to 700 characters, and at most 3 tool rounds.
 
 With `COMMERCE=true` (Chatfront) there are no plans: every feature is on.
 
@@ -449,8 +469,8 @@ curl -X POST https://<api>/internal/connect -H "X-Cron-Secret: $CRON_SECRET" \
 ## Security for ReplyHub
 
 - **Fake sign-ups:** at most `SIGNUPS_PER_DAY` new businesses a day from the form, plus a
-  per-address rate limit. Until the operator connects a business's WhatsApp number
-  (`/internal/connect`), its web chat answers at most `TRIAL_REPLIES_PER_DAY` messages a day.
+  per-address rate limit. A new business is on the trial (see ReplyHub plans) until you set
+  its plan, so a fake sign-up costs at most 15 model replies.
 - **Store reads:** read-only keys, sealed at rest; only https addresses, and the address is
   checked to be public at the moment of every connection (no DNS rebinding), with no redirects
   and no proxy from the environment.

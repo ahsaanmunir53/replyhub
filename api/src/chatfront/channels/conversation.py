@@ -58,6 +58,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 HISTORY_LIMIT = 12
+HISTORY_CHARS = 700  # an earlier message longer than this is cut, to keep every call small
 CHANNEL_NAMES = {
     Channel.WHATSAPP: "WhatsApp",
     Channel.INSTAGRAM: "Instagram",
@@ -85,11 +86,13 @@ class Responder(Protocol):
 CATALOG_LINES = 40
 
 
-def catalog_lines(tenant: Tenant, items: Sequence[CatalogItem]) -> list[str]:
+def catalog_lines(
+    tenant: Tenant, items: Sequence[CatalogItem], cap: int = CATALOG_LINES
+) -> list[str]:
     """The products the assistant may talk about, with the exact prices code allows."""
     pack, english = get_pack(tenant.country), load_registry().get("en")
     lines = []
-    for item in items[:CATALOG_LINES]:
+    for item in items[:cap]:
         prices = sorted({item.price_of(v) for v in item.variants if v.active})
         ends = dict.fromkeys((prices[0], prices[-1])) if prices else {}
         shown = " to ".join(format_money(Minor(p), pack, english) for p in ends)
@@ -108,7 +111,12 @@ def catalog_lines(tenant: Tenant, items: Sequence[CatalogItem]) -> list[str]:
 
 
 def shop_details(
-    tenant: Tenant, items: Sequence[CatalogItem] = (), notes: Sequence[str] = ()
+    tenant: Tenant,
+    items: Sequence[CatalogItem] = (),
+    notes: Sequence[str] = (),
+    *,
+    asked: str | None = None,
+    lines_cap: int = CATALOG_LINES,
 ) -> str:
     profile = tenant.profile or {}
     lines = [f"Name: {tenant.name}"]
@@ -126,9 +134,9 @@ def shop_details(
     ):
         if value := profile.get(key):
             lines.append(f"{label}: {value}")
-    lines += rules.detail_lines(tenant)
+    lines += rules.detail_lines(tenant, asked)
     if items:
-        lines += ["Products:", *catalog_lines(tenant, items)]
+        lines += ["Products:", *catalog_lines(tenant, items, lines_cap)]
     return "\n".join([*lines, *notes])
 
 
@@ -137,7 +145,7 @@ def as_chat(message: Message) -> ChatMessage:
         "user" if message.direction == Direction.IN else "assistant"
     )
     text = message.body or (f"[{message.kind}]" if message.kind != Kind.TEXT else "")
-    return ChatMessage(role, text)
+    return ChatMessage(role, text[:HISTORY_CHARS])
 
 
 _PRIVATE = {"id_card": "an ID card", "bank_card": "a bank card"}
@@ -318,6 +326,20 @@ async def handle_reply(ctx: JobContext) -> None:
         customer = await session.get(Customer, conversation.customer_id)
         assert account is not None
         assert customer is not None
+        if not services.settings.commerce and conversation.party == Party.CUSTOMER:
+            # A customer who sends three messages in a row gets one answer, to the last, which
+            # sees the others in its history: one model call instead of three.
+            newer = await session.scalar(
+                select(Message.id)
+                .where(
+                    Message.conversation_id == conversation.id,
+                    Message.direction == Direction.IN,
+                    Message.created_at > message.created_at,
+                )
+                .limit(1)
+            )
+            if newer is not None:
+                return
         history = list(
             await session.scalars(
                 select(Message)

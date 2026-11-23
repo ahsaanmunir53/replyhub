@@ -66,7 +66,7 @@ from chatfront.orders.models import (
     ReturnRequest,
     WaitlistEntry,
 )
-from chatfront.owner.models import PendingAction
+from chatfront.owner.models import AssistantUsage, PendingAction
 from chatfront.payments.models import (
     Payment,
     PaymentClaim,
@@ -94,6 +94,7 @@ __all__ = [
     "AiCall",
     "Appointment",
     "Approval",
+    "AssistantUsage",
     "AuditEntry",
     "B2BOrder",
     "Base",

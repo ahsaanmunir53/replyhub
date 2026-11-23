@@ -57,7 +57,17 @@ class Settings(BaseSettings):
     signups_per_day: int = 20  # new businesses a day across the app, against fake sign-ups
     # Replies a day for a business whose WhatsApp the operator has not connected yet (the web
     # chat trial), so an unchecked sign-up cannot run up the model bill.
-    trial_replies_per_day: int = 30
+    # The trial (ReplyHub): the assistant answers this many chats, this many times in all,
+    # for this many days after sign-up; then the owner is asked to pick a plan.
+    trial_chats: int = Field(default=1, ge=0, le=20)
+    trial_replies: int = Field(default=15, ge=0, le=500)
+    trial_days: int = Field(default=7, ge=1, le=60)
+    # Assistant replies a month in each paid plan; past them the owner's team answers.
+    plan_replies: str = "basic=1500,pro=4000,business=10000"
+    # What each plan costs, shown to the owner as written ("basic=AED 99 a month;pro=...").
+    plan_prices: str = ""
+    # The operator's own WhatsApp number (digits with country code) owners message to pay.
+    sales_whatsapp: str = ""
     # Shops whose owner console link is printed in the logs at start (12 hours), for hosts
     # without a shell: slugs separated by ",". Remove once signed in.
     owner_link_shops: str = ""

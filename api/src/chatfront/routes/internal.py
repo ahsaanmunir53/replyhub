@@ -13,13 +13,23 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 
 from chatfront.audit.service import Actor, ActorType, record
+from chatfront.books.ledger import today
 from chatfront.channels.connect import CONNECTABLE, connect
 from chatfront.core.clock import utcnow
 from chatfront.core.errors import Forbidden, NotFound
-from chatfront.core.models import Tenant
+from chatfront.core.models import Staff, StaffRole, Tenant
 from chatfront.jobs.cron import run_due, secret_matches
 from chatfront.media.storage import LocalStorage
-from chatfront.owner.subscription import PLAN_KEY, VERIFIED, Plan
+from chatfront.owner.subscription import (
+    PAID_UNTIL,
+    PLAN_KEY,
+    PLAN_REQUEST,
+    VERIFIED,
+    Plan,
+    extended,
+    plan_of,
+    requested,
+)
 from chatfront.services import Services, get_services
 
 router = APIRouter()
@@ -126,28 +136,79 @@ async def local_media(key: str, exp: int, sig: str, services: ServicesDep) -> Re
 class PlanIn(BaseModel):
     shop: str = Field(min_length=1, max_length=60)  # the business's slug
     plan: Plan
+    # Months paid for. Each payment adds them to the current end, so paying early loses
+    # nothing. Leave out to change the plan without a payment (an upgrade mid-month).
+    months: int | None = Field(None, ge=1, le=24)
 
 
 @router.post("/internal/plan")
 async def set_plan(
     body: PlanIn, services: ServicesDep, secret: SecretHeader = None
-) -> dict[str, str]:
-    """The operator sets what a business pays for (ReplyHub plans); owners cannot."""
+) -> dict[str, str | None]:
+    """The operator sets what a business pays for (ReplyHub plans) once it has paid; owners
+    cannot. The owner's request, if any, is cleared."""
     _check(services, secret)
     async with services.db.system() as session:
         tenant = await session.scalar(select(Tenant).where(Tenant.slug == body.shop))
         if tenant is None:
             raise NotFound("Shop")
-        tenant.profile = {**(tenant.profile or {}), PLAN_KEY: body.plan.value}
+        profile = {k: v for k, v in (tenant.profile or {}).items() if k != PLAN_REQUEST}
+        profile[PLAN_KEY] = body.plan.value
+        if body.plan == Plan.TRIAL:
+            profile.pop(PAID_UNTIL, None)
+        elif body.months is not None:
+            profile[PAID_UNTIL] = extended(tenant, today(tenant), body.months).isoformat()
+        tenant.profile = profile
         await record(
             session,
             tenant.id,
             Actor(ActorType.SYSTEM, "operator"),
             "settings.plan",
             entity=("tenant", str(tenant.id)),
-            data={"plan": body.plan.value},
+            data={"plan": body.plan.value, "months": body.months},
         )
-    return {"shop": body.shop, "plan": body.plan.value}
+    return {"shop": body.shop, "plan": body.plan.value, "paid_until": profile.get(PAID_UNTIL)}
+
+
+class PlanRequestOut(BaseModel):
+    shop: str
+    name: str
+    plan: str  # the plan the owner asked for
+    current: str
+    asked_at: datetime
+    owner_email: str | None
+
+
+@router.get("/internal/plan-requests")
+async def plan_requests(services: ServicesDep, secret: SecretHeader = None) -> list[PlanRequestOut]:
+    """Owners who asked to pay for a plan, oldest first: the operator's to-do list."""
+    _check(services, secret)
+    async with services.db.system() as session:
+        tenants = list(
+            await session.scalars(select(Tenant).where(Tenant.profile.has_key(PLAN_REQUEST)))
+        )
+        found = []
+        for tenant in tenants:
+            asked = requested(tenant)
+            if asked is None:
+                continue
+            owner = await session.scalar(
+                select(Staff)
+                .where(Staff.tenant_id == tenant.id, Staff.role == StaffRole.OWNER)
+                .order_by(Staff.created_at)
+                .limit(1)
+            )
+            found.append(
+                PlanRequestOut(
+                    shop=tenant.slug,
+                    name=tenant.name,
+                    plan=asked[0].value,
+                    current=plan_of(tenant).value,
+                    asked_at=asked[1],
+                    owner_email=owner.email if owner else None,
+                )
+            )
+    return sorted(found, key=lambda r: r.asked_at)
 
 
 class ConnectIn(BaseModel):

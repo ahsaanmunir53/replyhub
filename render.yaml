@@ -64,6 +64,10 @@ services:
       - key: DB_POOL_SIZE
         value: "5"
       # Optional; each one turns a feature on (.env.example says where to get it)
+      - key: PLAN_PRICES  # e.g. basic=AED 99 a month;pro=AED 199 a month;business=AED 399 a month
+        sync: false
+      - key: SALES_WHATSAPP  # your own number; owners message it to pay for a plan
+        sync: false
       - key: SAFE_BROWSING_API_KEY
         sync: false
       - key: WHATSAPP_ALERT_TEMPLATE

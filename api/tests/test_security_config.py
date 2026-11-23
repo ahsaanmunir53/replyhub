@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 import pytest
 from pydantic import SecretStr, ValidationError
@@ -57,7 +59,9 @@ def test_production_rejects_development_secret_defaults() -> None:
 
 @pytest.mark.asyncio
 async def test_security_headers_are_set_on_api_responses() -> None:
-    app = create_app(Settings(env="test", worker_enabled=False))
+    app = create_app(
+        Settings(env="test", worker_enabled=False, web_dist_dir=Path("/nonexistent-web-dist"))
+    )
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/security-test-route-that-does-not-exist")
@@ -72,7 +76,9 @@ async def test_security_headers_are_set_on_api_responses() -> None:
 async def test_rate_limit_error_includes_retry_after() -> None:
     from chatfront.core.errors import RateLimited
 
-    app = create_app(Settings(env="test", worker_enabled=False))
+    app = create_app(
+        Settings(env="test", worker_enabled=False, web_dist_dir=Path("/nonexistent-web-dist"))
+    )
 
     @app.get("/security-rate-limit-test")
     async def rate_limit_test() -> None:
@@ -158,7 +164,9 @@ def test_owner_route_permissions_are_explicit() -> None:
     from chatfront.core.settings import Settings
     from chatfront.main import create_app
 
-    app = create_app(Settings(env="test", worker_enabled=False))
+    app = create_app(
+        Settings(env="test", worker_enabled=False, web_dist_dir=Path("/nonexistent-web-dist"))
+    )
     violations: list[str] = []
 
     def dependency_tree(dependant: object) -> list[object]:
@@ -233,7 +241,9 @@ def test_session_token_has_issue_time_and_old_tokens_require_fresh_link() -> Non
 
 @pytest.mark.asyncio
 async def test_security_headers_apply_to_success_and_error_responses() -> None:
-    app = create_app(Settings(env="test", worker_enabled=False))
+    app = create_app(
+        Settings(env="test", worker_enabled=False, web_dist_dir=Path("/nonexistent-web-dist"))
+    )
 
     @app.get("/security-success-route")
     async def success() -> dict[str, bool]:
@@ -263,7 +273,9 @@ async def test_security_headers_apply_to_success_and_error_responses() -> None:
 
 @pytest.mark.asyncio
 async def test_unhandled_errors_never_return_tracebacks_or_exception_text() -> None:
-    app = create_app(Settings(env="test", worker_enabled=False))
+    app = create_app(
+        Settings(env="test", worker_enabled=False, web_dist_dir=Path("/nonexistent-web-dist"))
+    )
 
     @app.get("/security-unhandled-error")
     async def unhandled() -> None:

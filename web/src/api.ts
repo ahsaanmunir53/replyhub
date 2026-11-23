@@ -157,6 +157,29 @@ export type StoreIn = {
   report_hour: number;
 };
 
+/** Where the business stands on its ReplyHub plan, and what each plan gives. */
+export type PaidPlan = "basic" | "pro" | "business";
+export type PlanOption = {
+  id: PaidPlan;
+  price: string | null;
+  replies: number;
+  features: string[];
+};
+export type PlanView = {
+  plan: "trial" | PaidPlan;
+  used: number;
+  limit: number;
+  chats_used: number;
+  chats_limit: number;
+  trial_ends: string | null;
+  paid_until: string | null;
+  stopped: "trial_over" | "allowance" | "lapsed" | null;
+  requested: PaidPlan | null;
+  requested_at: string | null;
+  contact: string | null;
+  options: PlanOption[];
+};
+
 /** The owner's rules the assistant answers from (ReplyHub). */
 export type Rules = {
   about: string;
@@ -277,7 +300,7 @@ export type OwnerMe = {
   role: string;
   rights: string[];
   is_platform?: boolean;
-  plan?: "basic" | "pro" | "business"; // ReplyHub: what the business pays for
+  plan?: "trial" | "basic" | "pro" | "business"; // ReplyHub: what the business pays for
   features?: string[];
   whatsapp_connected?: boolean; // ReplyHub onboarding
 };
@@ -1964,6 +1987,13 @@ export const api = {
     call<Store>("/api/owner/store/sync", { method: "POST", headers: bearer(token) }),
   removeStore: (token: string) =>
     call<Store>("/api/owner/store", { method: "DELETE", headers: bearer(token) }),
+  plan: (token: string) => call<PlanView>("/api/owner/plan", { headers: bearer(token) }),
+  askForPlan: (token: string, plan: PaidPlan) =>
+    call<PlanView>("/api/owner/plan/request", {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify({ plan }),
+    }),
   rules: (token: string) => call<Rules>("/api/owner/rules", { headers: bearer(token) }),
   saveRules: (token: string, rules: Rules) =>
     call<Rules>("/api/owner/rules", {

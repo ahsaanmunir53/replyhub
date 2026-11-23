@@ -113,7 +113,7 @@ async def sign_up(body: SignupIn, request: Request, services: ServicesDep) -> Si
             owner_email=str(body.email),
             profile={
                 "city": " ".join(body.city.split()),
-                PLAN_KEY: Plan.BASIC.value,
+                PLAN_KEY: Plan.TRIAL.value,
                 SIGNED_UP: True,
             },
             owner_phone_hash=hash_phone(number, services.keys.phone_hash_key),

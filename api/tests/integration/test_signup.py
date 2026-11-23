@@ -14,8 +14,7 @@ from chatfront.core.i18n import t
 from chatfront.core.models import Staff, Tenant
 from chatfront.core.phone import hash_phone
 from chatfront.services import Services
-from tests.integration.chat import Client, customer, last, said, say, signed, wa_message
-from tests.integration.conftest import SHOP
+from tests.integration.chat import Client, signed, wa_message
 from tests.integration.test_books_shield import LANG, drain, graph_mock, owner_on_whatsapp, texts
 
 CRON = {"X-Cron-Secret": "test-cron-secret"}
@@ -59,7 +58,7 @@ async def test_a_business_signs_up_and_lands_in_its_console(
     ).json()
     assert (me["shop_name"], me["plan"], me["country"], me["currency"]) == (
         "Al Noor Perfumes",
-        "basic",
+        "trial",
         "AE",
         "AED",
     )
@@ -135,19 +134,3 @@ async def test_sign_ups_a_day_are_capped(
     assert (await client.post("/api/signup", json=FORM)).status_code == 200
     full = await client.post("/api/signup", json={**FORM, "business_name": "Second Shop"})
     assert full.status_code == 429
-
-
-async def test_an_unconnected_business_gets_a_few_replies_a_day(
-    replyhub: tuple[Client, Services], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Until the operator connects its WhatsApp, a business's web chat answers a few times a
-    day, so a fake sign-up cannot run up the model bill; after that, no cap."""
-    client, services = replyhub
-    monkeypatch.setattr(services.settings, "trial_replies_per_day", 0)
-    guest, token = await customer(client, SHOP)
-    reply = last(await say(client, services, SHOP, guest, "price?", token=token))
-    assert reply["body"] in said("reply.trial_limit")
-    connect = {"shop": SHOP, "channel": "whatsapp", "account_id": "PN-T", "handle": "+923001112223"}
-    assert (await client.post("/internal/connect", headers=CRON, json=connect)).status_code == 200
-    reply = last(await say(client, services, SHOP, guest, "price?", token=token))
-    assert reply["body"] not in said("reply.trial_limit")
