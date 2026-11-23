@@ -87,13 +87,14 @@ async def request(
             raise error
         delay = backoff_seconds * (2**attempt)
         if error.status == 429:  # a rate limit says when to come back; wait that long, briefly
-            delay = max(delay, _retry_after(response, error.message))
+            delay = max(delay, MIN_RATE_WAIT, _retry_after(response, error.message))
         log.warning("%s failed (%s), retrying in %.1fs", service, error.message, delay)
         await asyncio.sleep(delay)
         attempt += 1
 
 
 _TRY_AGAIN = re.compile(r"try again in (?:(\d+)m)?([\d.]+)s", re.I)
+MIN_RATE_WAIT = 1.2  # free plans such as Mistral's allow one request a second
 MAX_RATE_WAIT = 8.0  # longer than this, the next endpoint answers instead
 
 
