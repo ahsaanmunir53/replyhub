@@ -154,7 +154,12 @@ class OwnerAssistant:
         if turn.message.kind == Kind.TEXT and _SIGN_IN.match(turn.message.body or ""):
             return await self._sign_in_link(turn)  # on every plan: it is how owners sign in
         features = subscription.features_of(turn.tenant, commerce=self.settings.commerce)
-        if subscription.Feature.OWNER_WHATSAPP not in features:
+        # The plan decides commands from the owner's own WhatsApp; the assistant in the web
+        # console works on every plan, as it is how a new owner adds products and rules.
+        if (
+            turn.message.channel == "whatsapp"
+            and subscription.Feature.OWNER_WHATSAPP not in features
+        ):
             return [OutText(t("plan.no_owner_whatsapp", turn.lang))]
         if turn.message.kind == Kind.TEXT and (asked := store.asks(turn.message.body)):
             text = await store.answer(self, turn.tenant, asked, turn.lang)

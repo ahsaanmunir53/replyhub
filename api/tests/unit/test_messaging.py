@@ -201,7 +201,7 @@ def test_chat_links() -> None:
     parsed = urlparse(wa)
     assert (parsed.netloc, parsed.path) == ("wa.me", "/923001234567")
     assert parse_qs(parsed.query)["text"] == [
-        "Salam Saffron! Main ne aap ki dukaan Chatfront par dekhi."
+        "Salam Saffron! Main ne aap ki dukaan ReplyHub par dekhi."
     ]
     assert (
         chat_link("instagram", "@saffron.pk", shop_name="S", slug="saffron-kitchen", lang="en")

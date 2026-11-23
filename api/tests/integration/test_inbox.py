@@ -255,3 +255,25 @@ async def test_an_order_taken_on_the_phone_is_typed_in_and_joins_the_orders(
         order = await session.scalar(select(Order).where(Order.code == code))
     assert order is not None
     assert order.source == "phone"
+
+
+async def test_an_owner_adds_a_product_from_the_plain_form(app: tuple[Client, Services]) -> None:
+    client, services = app
+    owner = await owner_auth(services)
+    added = await client.post(
+        "/api/owner/products/form",
+        json={
+            "name": "Lawn suit",
+            "price": "4500",
+            "stock": 20,
+            "option": "Colour",
+            "values": ["Blue", "Peach"],
+        },
+        headers=owner,
+    )
+    assert added.status_code == 200, added.text
+    products = (await client.get("/api/owner/products", headers=owner)).json()
+    made = next(p for p in products if p["code"] == added.json()["code"])
+    assert made["price"] == 450000  # Rs 4,500 in paisa
+    assert [v["options"] for v in made["variants"]] == [{"Colour": "Blue"}, {"Colour": "Peach"}]
+    assert {v["stock"] for v in made["variants"]} == {20}

@@ -7972,3 +7972,11 @@ button {
   margin: 8px 0;
   padding-inline-start: 20px;
 }
+
+/* The main actions on the landing page stand out from the light page. */
+.land-form .button-ink,
+.signup-top .button-ink {
+  border-color: #1f6fd1;
+  background: #1f6fd1;
+  color: #fff;
+}

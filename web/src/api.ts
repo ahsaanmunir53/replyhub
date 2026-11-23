@@ -1535,6 +1535,15 @@ export const api = {
       headers: bearer(token),
       body: JSON.stringify({ staff_id: staffId }),
     }),
+  addProduct: (
+    token: string,
+    body: { name: string; price: string; stock: number | null; option: string; values: string[] },
+  ) =>
+    call<{ code: string; name: string }>("/api/owner/products/form", {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify(body),
+    }),
   addPhoneOrder: (
     token: string,
     lines: { variant_id: string; quantity: number }[],

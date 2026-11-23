@@ -31,6 +31,7 @@ import { CustomRequestsPanel } from "../components/Custom";
 import { DashboardPanel } from "../components/Dashboard";
 import { DepartmentsPanel } from "../components/Departments";
 import { PhoneOrderPanel } from "../components/PhoneOrder";
+import { AddProductPanel } from "../components/AddProduct";
 import { FraudReportsPanel, FraudReviewPanel } from "../components/Fraud";
 import { ImportsPanel } from "../components/Imports";
 import { InboxPanel } from "../components/Inbox";
@@ -448,6 +449,7 @@ function Console({
       show: true,
       children: (
         <>
+          {!COMMERCE && can("catalog") && <AddProductPanel token={token} onAdded={saved} />}
           <div className="console-switch" role="tablist" aria-label={t("console.title")}>
             {(["chat", "products"] as const).map((name) => (
               <button

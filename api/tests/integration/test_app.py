@@ -74,7 +74,7 @@ async def test_health_and_shop(app: tuple[httpx.AsyncClient, Services]) -> None:
         (
             "whatsapp",
             "https://wa.me/923000000000?text=Salam+Gulmohar+Lawn+House%21+Main+ne+aap+ki"
-            "+dukaan+Chatfront+par+dekhi.",
+            "+dukaan+ReplyHub+par+dekhi.",
         ),
     ]
     assert shop["channels"] == trust["channels"]
