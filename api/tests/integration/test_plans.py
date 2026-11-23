@@ -15,6 +15,7 @@ from chatfront.ai.mock import Fixture
 from chatfront.ai.models import AiCall
 from chatfront.channels.models import Message
 from chatfront.core.models import Tenant
+from chatfront.orders.tools import accepted_methods
 from chatfront.owner.rules import faq_answer
 from chatfront.owner.subscription import PAID_UNTIL
 from chatfront.services import Services
@@ -55,7 +56,7 @@ async def test_a_new_business_is_on_the_trial(replyhub: tuple[Client, Services])
     client, services = replyhub
     owner = await owner_auth(services)
     me = (await client.get("/api/owner/me", headers=owner)).json()
-    assert (me["plan"], me["features"]) == ("trial", ["assistant", "inbox", "rules"])
+    assert (me["plan"], me["features"]) == ("trial", ["assistant", "inbox", "rules", "shop"])
     assert (await client.get("/api/owner/rules", headers=owner)).status_code == 200
     assert (await client.get("/api/owner/inbox", headers=owner)).status_code == 200
     await set_plan(client, "basic")
@@ -251,3 +252,22 @@ async def test_several_quick_messages_get_one_answer(replyhub: tuple[Client, Ser
         await client.post(f"/api/shops/{SHOP}/chat/messages", json=post, headers=guest)
     messages = await settle(client, services, SHOP, guest)
     assert [m["body"] for m in messages if m["direction"] == "out"] == ["Sure."]
+
+
+async def test_orders_in_the_chat_are_a_switch_and_cash_on_delivery_only(
+    replyhub: tuple[Client, Services],
+) -> None:
+    client, services = replyhub
+    owner = await owner_auth(services)
+    assert (await client.get("/api/owner/me", headers=owner)).json()["selling"] is False
+    on = await client.put("/api/owner/plan/selling", headers=owner, json={"on": True})
+    assert on.status_code == 200
+    assert (await client.get("/api/owner/me", headers=owner)).json()["selling"] is True
+    async with services.db.system() as session:
+        tenant = await session.scalar(select(Tenant).where(Tenant.slug == SHOP))
+        assert tenant is not None
+        assert accepted_methods(tenant) == ["cod"]
+    await set_plan(client, "basic")  # Basic has no shop: the switch no longer counts
+    assert (await client.get("/api/owner/me", headers=owner)).json()["selling"] is False
+    refused = await client.put("/api/owner/plan/selling", headers=owner, json={"on": True})
+    assert refused.status_code == 400

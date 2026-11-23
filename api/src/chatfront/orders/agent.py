@@ -72,6 +72,7 @@ from chatfront.orders.tools import (
 from chatfront.owner import actions, usage
 from chatfront.owner.models import ActionStatus, PendingAction
 from chatfront.owner.rules import content_words, quick_answer
+from chatfront.owner.subscription import sells
 from chatfront.payments.claims import handle_screenshot
 from chatfront.payments.due import ask_for, start_payment
 from chatfront.shield import buyers, consent, guardian, phishing
@@ -192,6 +193,9 @@ class OrderAgent:
                 )
         return replies
 
+    def _sells(self, turn: Turn) -> bool:
+        return sells(turn.tenant, commerce=self.services.settings.commerce)
+
     async def _answer(self, turn: Turn, tapped: str | None) -> list[Outbound]:
         live = await self._live_sale(turn, tapped)
         if live is not None:
@@ -219,14 +223,16 @@ class OrderAgent:
             return await self._scam(turn, scam)
         # Selling off (ReplyHub): the assistant offers to help first and hands over only if the
         # customer still wants a person; its prompt says so.
-        selling = self.services.settings.commerce
+        selling = self._sells(turn)
         if selling and wants_a_person(turn.message.body):
             return await self._hand_over(turn, "the customer asked for a person", "customer")
-        if selling and turn.media is not None:
+        if selling and self.services.settings.commerce and turn.media is not None:
             payment = await handle_screenshot(self.services, turn)
             if payment is not None:
                 return payment
-        if not selling and (quick := quick_answer(turn.tenant, turn.message, turn.lang)):
+        if not self.services.settings.commerce and (
+            quick := quick_answer(turn.tenant, turn.message, turn.lang)
+        ):
             return [OutText(quick)]  # the owner's own answer, or a thank-you: no model needed
         await self._take_pin(turn)
         ctx, request = await self._prepare(turn)
@@ -278,7 +284,7 @@ class OrderAgent:
         if category is None:
             return browse.categories(items, turn.lang)
         api_url = self.services.settings.public_base_url
-        sell = self.services.settings.commerce
+        sell = self._sells(turn)
         return browse.category_cards(api_url, turn.tenant, items, category, turn.lang, sell)
 
     # -- the model's part -----------------------------------------------------------------
@@ -289,7 +295,9 @@ class OrderAgent:
             items = await load_items(session)
             modules = await enabled_modules(session, tenant.id)
             if not services.settings.commerce:
-                modules -= COMMERCE_MODULES
+                # ReplyHub never checks payments; with the shop on it takes cash-on-delivery
+                # orders, otherwise it only answers.
+                modules -= COMMERCE_MODULES if not self._sells(turn) else {"payments"}
             trusted = await buyers.trusted(session, turn.conversation.customer_id)
             shown = await session.scalars(select(Coupon).where(Coupon.show_on_page.is_(True)))
             notes = [
@@ -298,7 +306,7 @@ class OrderAgent:
             ]
             shared = await shared_product(session, turn.message.payload)
         language = load_registry().get(turn.lang)
-        if services.settings.commerce:
+        if self._sells(turn):
             details = shop_details(tenant, items, notes)
         else:  # ReplyHub: the products and answers closest to the question, fewer tokens
             asked = turn.message.body or ""
@@ -323,7 +331,7 @@ class OrderAgent:
             link_secret=services.settings.secret_key.get_secret_value(),
             items=items,
         )
-        prompt = load_prompt("order_agent" if services.settings.commerce else "reply_agent")
+        prompt = load_prompt("order_agent" if self._sells(turn) else "reply_agent")
         system = prompt.render(
             shop_name=tenant.name,
             business_type=get_template(tenant.template).name.en.lower(),
@@ -374,7 +382,8 @@ class OrderAgent:
         """Let the model call tools for a few rounds; its last words are the answer."""
         tools = self.services.registries.tools
         messages = list(request.messages)
-        rounds = MAX_TOOL_ROUNDS if self.services.settings.commerce else REPLY_TOOL_ROUNDS
+        selling = sells(ctx.tenant, commerce=self.services.settings.commerce)
+        rounds = MAX_TOOL_ROUNDS if selling else REPLY_TOOL_ROUNDS
         _USED_MODEL.set(True)
         for _ in range(rounds):
             result = await self.services.ai.complete(replace(request, messages=list(messages)))

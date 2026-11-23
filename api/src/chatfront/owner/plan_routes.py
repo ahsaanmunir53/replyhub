@@ -23,9 +23,12 @@ from chatfront.owner.subscription import (
     PAID,
     PLAN_REQUEST,
     PLANS,
+    SELLING,
+    Feature,
     Plan,
     allowance,
     paid_until,
+    plan_of,
     prices,
     requested,
 )
@@ -129,5 +132,30 @@ async def ask_for_plan(body: PlanAsk, session: SettingsDep, services: ServicesDe
             "settings.plan_request",
             entity=("tenant", str(tenant.id)),
             data={"plan": body.plan.value},
+        )
+    return await _view(services, tenant)
+
+
+class SellingIn(BaseModel):
+    on: bool
+
+
+@router.put("/selling")
+async def set_selling(body: SellingIn, session: SettingsDep, services: ServicesDep) -> PlanView:
+    """Turn orders in the chat on or off (cash on delivery only). Needs a plan with the shop."""
+    async with services.db.tenant(session.tenant_id) as db:
+        tenant = await db.get(Tenant, session.tenant_id)
+        if tenant is None:
+            raise NotFound("shop")
+        if body.on and Feature.SHOP not in PLANS[plan_of(tenant)]:
+            raise AppError("plan_needed", "Orders in the chat come with the Pro plan")
+        tenant.profile = {**(tenant.profile or {}), SELLING: body.on}
+        await record(
+            db,
+            tenant.id,
+            Actor(ActorType.STAFF, str(session.staff_id)),
+            "settings.selling",
+            entity=("tenant", str(tenant.id)),
+            data={"on": body.on},
         )
     return await _view(services, tenant)

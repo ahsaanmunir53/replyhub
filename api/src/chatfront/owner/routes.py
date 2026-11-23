@@ -35,7 +35,7 @@ from chatfront.core.models import Staff, Tenant
 from chatfront.owner.rights import Can, rights
 from chatfront.owner.sandbox import copy_demo_shop
 from chatfront.owner.sessions import NotSignedIn, OwnerSession, require_recent, verify
-from chatfront.owner.subscription import Feature, Plan, features_of, plan_of
+from chatfront.owner.subscription import Feature, Plan, features_of, plan_of, sells
 from chatfront.services import Services, get_services
 
 router = APIRouter(prefix="/api/owner")
@@ -150,6 +150,8 @@ class Me(BaseModel):
     plan: str = Plan.BUSINESS.value  # ReplyHub: what the business pays for
     features: list[str] = Field(default_factory=list)
     whatsapp_connected: bool = False  # ReplyHub onboarding: the business's number is in
+    channels: list[str] = Field(default_factory=list)  # the connected chat apps
+    selling: bool = False  # the assistant takes orders in the chat
 
 
 class OwnerVariant(BaseModel):
@@ -194,10 +196,8 @@ async def me(session: StaffDep, services: ServicesDep) -> Me:
     async with services.db.tenant(session.tenant_id) as db:
         tenant = await db.get(Tenant, session.tenant_id)
         staff = await db.get(Staff, session.staff_id)
-        whatsapp = await db.scalar(
-            select(ChannelAccount.id).where(
-                ChannelAccount.channel == Channel.WHATSAPP, ChannelAccount.active.is_(True)
-            )
+        connected = set(
+            await db.scalars(select(ChannelAccount.channel).where(ChannelAccount.active.is_(True)))
         )
     if tenant is None or staff is None or not staff.active:
         raise NotSignedIn
@@ -217,7 +217,9 @@ async def me(session: StaffDep, services: ServicesDep) -> Me:
         is_platform=tenant.is_platform,
         plan=plan_of(tenant).value,
         features=sorted(features_of(tenant, commerce=services.settings.commerce)),
-        whatsapp_connected=whatsapp is not None,
+        whatsapp_connected=Channel.WHATSAPP in connected,
+        channels=sorted(str(c) for c in connected),
+        selling=sells(tenant, commerce=services.settings.commerce),
     )
 
 

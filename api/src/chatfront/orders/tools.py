@@ -47,6 +47,7 @@ from chatfront.orders.models import Order, OrderItem
 from chatfront.orders.states import OrderStatus
 from chatfront.owner import actions
 from chatfront.owner.models import ActionStatus
+from chatfront.owner.subscription import SELLING
 from chatfront.payments.due import cod_advance, shop_methods
 from chatfront.shield import approvals
 from chatfront.shield.answer_check import Facts
@@ -523,7 +524,10 @@ async def make_offer(ctx: AgentContext, params: Offer) -> dict[str, Any]:
 
 def accepted_methods(tenant: Tenant, *, trusted: bool = False) -> list[str]:
     """Cash on delivery and/or transfer, from what the shop said it takes; the khata too, for a
-    verified buyer at a shop that gives credit (features 38 and 49)."""
+    verified buyer at a shop that gives credit (features 38 and 49). A ReplyHub shop takes
+    cash on delivery only: the app never checks a payment there."""
+    if (tenant.profile or {}).get(SELLING):
+        return ["cod"]
     methods = []
     for method in shop_methods(tenant):
         if method == "deposit" or (method == "credit" and not trusted):
