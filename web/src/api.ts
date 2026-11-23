@@ -303,6 +303,8 @@ export type OwnerMe = {
   plan?: "trial" | "basic" | "pro" | "business"; // ReplyHub: what the business pays for
   features?: string[];
   whatsapp_connected?: boolean; // ReplyHub onboarding
+  channels?: string[]; // the chat apps connected
+  selling?: boolean; // the assistant takes orders in the chat
 };
 export type OwnerProduct = {
   id: string;
@@ -1988,6 +1990,12 @@ export const api = {
   removeStore: (token: string) =>
     call<Store>("/api/owner/store", { method: "DELETE", headers: bearer(token) }),
   plan: (token: string) => call<PlanView>("/api/owner/plan", { headers: bearer(token) }),
+  setSelling: (token: string, on: boolean) =>
+    call<PlanView>("/api/owner/plan/selling", {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify({ on }),
+    }),
   askForPlan: (token: string, plan: PaidPlan) =>
     call<PlanView>("/api/owner/plan/request", {
       method: "POST",

@@ -6,11 +6,11 @@
 */
 
 :root {
-  --ink: #0f1e4a;
-  --ink-raised: #1a2c66;
-  --ink-line: rgb(255 255 255 / 0.07);
-  --on-ink: #eef2ff;
-  --on-ink-muted: #aab5da;
+  --ink: #ffffff;
+  --ink-raised: #f1f6f3;
+  --ink-line: rgb(18 26 51 / 0.08);
+  --on-ink: #121a33;
+  --on-ink-muted: #56607a;
   --paper: #f2f5f3;
   --card: #ffffff;
   --text: #121a33;
@@ -47,19 +47,7 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #0a1538;
-    --ink-raised: #15245a;
-    --paper: #0e1530;
-    --card: #16204a;
-    --text: #e8ecf8;
-    --muted: #a3aecd;
-    --line: #26336a;
-    --rule: #1b2754;
-    color-scheme: dark;
-  }
-}
+/* Light only: the console is read for hours in shops and offices, often on bright screens. */
 
 @media (min-width: 720px) {
   :root {
@@ -1766,12 +1754,6 @@ button {
   cursor: default;
 }
 
-@media (prefers-color-scheme: dark) {
-  .bubble-buttons button {
-    border-color: var(--saffron);
-    color: var(--saffron);
-  }
-}
 
 .composer .composer-quiet {
   width: 40px;
@@ -2517,15 +2499,6 @@ button {
 }
 
 /* Night ink on a night card disappears: in the dark, chosen tabs and ink buttons turn light. */
-@media (prefers-color-scheme: dark) {
-  .button-ink,
-  .console-switch [aria-selected="true"],
-  .wording-langs [aria-checked="true"] {
-    border-color: var(--on-ink);
-    background: var(--on-ink);
-    color: var(--ink);
-  }
-}
 
 /* Customers waiting for the owner (handover) ------------------------------------------- */
 
@@ -4360,18 +4333,6 @@ button {
   font-size: 14px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .khata-kinds [aria-checked="true"] {
-    border-color: var(--on-ink);
-    background: var(--on-ink);
-    color: var(--ink);
-  }
-
-  .daybook tfoot th,
-  .daybook tfoot td {
-    border-top-color: var(--on-ink-muted);
-  }
-}
 
 /* Stock (features 117 to 120). Alerts sit with the other things waiting, edged in saffron.
    Batches are challan stubs on the khata page: each has a pencil gauge of what is left,
@@ -4758,21 +4719,6 @@ button {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .batch-edit .action-primary {
-    border-color: var(--on-ink);
-    background: var(--on-ink);
-    color: var(--ink);
-  }
-
-  .batch-meter span {
-    background: var(--on-ink);
-  }
-
-  .batch-meter.is-stale span {
-    background: var(--chili);
-  }
-}
 
 /* The dashboard (features 74, 112, 113): one period switch above everything it scopes, the
    orders count as the page's single hero figure, a column chart drawn like ballpoint ticks on
@@ -4788,15 +4734,6 @@ button {
   --effort-xhigh: #1a2c66;
 }
 
-@media (prefers-color-scheme: dark) {
-  .dashboard {
-    --chart-ink: #6f88e0;
-    --effort-low: #4a63c0;
-    --effort-medium: #7a91e0;
-    --effort-high: #a9baf0;
-    --effort-xhigh: #dbe3ff;
-  }
-}
 
 .dash-head {
   display: flex;
@@ -5316,15 +5253,6 @@ button {
   margin-top: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .checkout-pay label:has(input:checked) {
-    border-color: var(--on-ink);
-  }
-
-  .checkout-sums {
-    border-top-color: var(--on-ink-muted);
-  }
-}
 
 /* Big days and sales on the shop page: what to order by, and the time left (feature 95). -- */
 
@@ -6614,18 +6542,6 @@ button {
   color: var(--s-ink);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .store {
-    --s-paper: #1c1613;
-    --s-stone: #2a211c;
-    --s-ink: #f2e9dd;
-    --s-muted: #b8a999;
-    --s-line: #3a2f28;
-    --s-accent: #c25a6c;
-    --s-on-accent: #1c1613;
-    --s-gold: #c9a56b;
-  }
-}
 
 :root[data-theme="dark"] .store {
   --s-paper: #1c1613;
@@ -7097,8 +7013,9 @@ button {
   height: 100dvh;
   overflow-y: auto;
   padding: 28px 14px;
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--card);
+  color: var(--text);
+  border-inline-end: 1px solid var(--line);
 }
 
 .admin-side-shop {
@@ -7116,20 +7033,21 @@ button {
 .admin-side a {
   padding: 10px 12px;
   border-radius: 10px;
-  color: var(--on-ink-muted);
+  color: var(--muted);
   font-size: 0.9688rem;
   text-decoration: none;
 }
 
 .admin-side a:hover {
-  color: var(--on-ink);
-  background: rgb(255 255 255 / 0.05);
+  color: var(--text);
+  background: var(--paper);
 }
 
-.admin-side a[aria-current="true"] {
-  background: var(--ink-raised);
-  color: var(--on-ink);
-  box-shadow: inset 3px 0 0 var(--saffron);
+.admin-side a[aria-current="page"] {
+  background: color-mix(in srgb, var(--stamp) 10%, var(--card));
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--stamp);
 }
 
 .admin-main {
@@ -7285,4 +7203,88 @@ button {
 .plan-features {
   margin: 8px 0 12px;
   padding-inline-start: 18px;
+}
+
+/* One console page at a time: its title and what it is for. */
+.page-head {
+  margin: 8px 0 22px;
+  max-width: 68ch;
+}
+.page-head h2 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+}
+.page-head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Connections */
+.conn-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.conn-card {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+.conn-card.is-on {
+  border-color: color-mix(in srgb, var(--stamp) 45%, var(--line));
+}
+.conn-card p {
+  color: var(--muted);
+  margin: 6px 0 12px;
+}
+.conn-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.conn-top h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.pill {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--paper);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pill-on {
+  background: color-mix(in srgb, var(--stamp) 14%, var(--card));
+  color: var(--text);
+}
+.conn-block {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  max-width: 760px;
+}
+.conn-block h3 {
+  margin: 0 0 6px;
+}
+.conn-block p {
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.conn-code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.8rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 10px;
 }

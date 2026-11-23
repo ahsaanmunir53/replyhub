@@ -62,6 +62,7 @@ createRoot(root).render(
             <Route path="/s/:slug/review/:code" element={<ReviewPage />} />
             <Route path="/start" element={<StartPage />} />
             <Route path="/owner" element={<OwnerPage />} />
+            <Route path="/owner/:section" element={<OwnerPage />} />
             <Route path="/dashboard" element={<Navigate to="/owner" replace />} />
             <Route path="/passport/:code" element={<PassportPage />} />
             <Route path="*" element={<NotFoundPage />} />

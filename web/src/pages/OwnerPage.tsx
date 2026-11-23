@@ -4,7 +4,7 @@
 import { COMMERCE } from "../config";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api";
 import type { LowStock, OwnerMe, OwnerProduct } from "../api";
 import { BookingsPanel } from "../components/Bookings";
@@ -46,6 +46,7 @@ import { ShelfCountPanel } from "../components/ShelfCount";
 import { ShelfCameraPanel } from "../components/ShelfCamera";
 import { NetworkCommercePanel } from "../components/NetworkCommerce";
 import { RulesPanel } from "../components/Rules";
+import { ConnectionsPanel } from "../components/Connections";
 import { PlanPanel } from "../components/Plan";
 import { SetupPanel } from "../components/Setup";
 import { StorePanel } from "../components/StoreLink";
@@ -344,18 +345,20 @@ function Console({
   token,
   onSignOut,
   onSessionEnded,
+  onRefresh,
 }: {
   me: OwnerMe;
   token: string;
   onSignOut: () => void;
   onSessionEnded: () => void;
+  onRefresh: () => void;
 }) {
   const { t } = useLang();
   const [products, setProducts] = useState<OwnerProduct[] | null>(null);
   const [replies, setReplies] = useState(0);
   const [saves, setSaves] = useState(0);
   const [panel, setPanel] = useState<"chat" | "products">("chat");
-  const current = useCurrentSection();
+  const { section: wanted } = useParams();
   const can = (right: string) => me.rights.includes(right);
   // ReplyHub plans: a feature outside the business's plan stays hidden (all on in Chatfront).
   const has = (feature: string) => !me.features || me.features.includes(feature);
@@ -428,6 +431,19 @@ function Console({
       label: "side.rules",
       show: can("settings"),
       children: <RulesPanel token={token} />,
+    },
+    {
+      id: "connections",
+      label: "side.connections",
+      show: !COMMERCE,
+      children: (
+        <ConnectionsPanel
+          me={me}
+          token={token}
+          canChange={can("settings")}
+          onChanged={onRefresh}
+        />
+      ),
     },
     {
       id: "store",
@@ -681,6 +697,7 @@ function Console({
     },
   ];
   const shown = sections.filter((section) => section.show);
+  const active = shown.find((section) => section.id === wanted) ?? sections[0]!;
 
   return (
     <Page wide>
@@ -695,13 +712,13 @@ function Console({
           </p>
           <nav aria-label={t("side.menu")}>
             {shown.map((section) => (
-              <a
+              <Link
                 key={section.id}
-                href={`#sec-${section.id}`}
-                aria-current={current === section.id ? "true" : undefined}
+                to={`/owner/${section.id}`}
+                aria-current={active.id === section.id ? "page" : undefined}
               >
                 {t(section.label)}
-              </a>
+              </Link>
             ))}
           </nav>
         </aside>
@@ -729,43 +746,17 @@ function Console({
           {me.is_demo && (
             <p className="console-demo">{t("console.demo_note")}</p>
           )}
-          {shown.map((section) => (
-            <section
-              key={section.id}
-              id={`sec-${section.id}`}
-              className="admin-section"
-            >
-              {section.children}
-            </section>
-          ))}
+          <section key={active.id} id={`sec-${active.id}`} className="admin-section">
+            <header className="page-head">
+              <h2>{t(active.label)}</h2>
+              <p>{t(`help.${active.id}` as Key)}</p>
+            </header>
+            {active.children}
+          </section>
         </div>
       </div>
     </Page>
   );
-}
-
-/** The console section in view, for the sidebar. */
-function useCurrentSection(): string {
-  const [current, setCurrent] = useState("overview");
-  useEffect(() => {
-    const seen = new IntersectionObserver(
-      (entries) => {
-        const top = entries.find((entry) => entry.isIntersecting);
-        if (top) setCurrent(top.target.id.replace(/^sec-/, ""));
-      },
-      { rootMargin: "-20% 0px -70% 0px" },
-    );
-    const timer = window.setTimeout(() => {
-      document
-        .querySelectorAll(".admin-section")
-        .forEach((node) => seen.observe(node));
-    });
-    return () => {
-      window.clearTimeout(timer);
-      seen.disconnect();
-    };
-  }, []);
-  return current;
 }
 
 export function OwnerPage() {
@@ -816,6 +807,9 @@ export function OwnerPage() {
       token={token}
       onSignOut={() => signOut(false)}
       onSessionEnded={sessionEnded}
+      onRefresh={() => {
+        void api.me(token).then(setMe, () => undefined);
+      }}
     />
   );
 }
