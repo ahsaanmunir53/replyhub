@@ -597,7 +597,7 @@ button {
 
 .hero-in {
   align-self: flex-end;
-  background: var(--ink-raised);
+  background: #1f6fd1;
   color: #fff;
   border-end-end-radius: 4px;
 }
@@ -1379,7 +1379,7 @@ button {
 
 .bubble-in {
   align-self: flex-end;
-  background: var(--ink-raised);
+  background: #1f6fd1;
   color: #fff;
   border-end-end-radius: 4px;
 }
@@ -1713,7 +1713,7 @@ button {
 }
 
 .bubble-buttons button:not(:disabled):hover {
-  background: var(--ink-raised);
+  background: #1f6fd1;
   color: #fff;
 }
 
