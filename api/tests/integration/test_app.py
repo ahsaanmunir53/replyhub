@@ -48,7 +48,14 @@ async def _messages(db: Database) -> list[Message]:
 async def test_health_and_shop(app: tuple[httpx.AsyncClient, Services]) -> None:
     client, _ = app
     health = await client.get("/health")
-    assert health.json() == {"ok": True, "models": "mock", "endpoints": []}
+    body = health.json()
+    assert {k: body[k] for k in ("ok", "models", "endpoints")} == {
+        "ok": True,
+        "models": "mock",
+        "endpoints": [],
+    }
+    assert body["db_ms"] >= 0
+    assert body["db_region"] is None  # a local database has no cloud region in its name
     assert (await client.get("/live")).json() == {"ok": True}  # the host's check, no database
     shop = (await client.get(f"/api/shops/{SHOP}")).json()
     assert shop["name"] == "Gulmohar Lawn House"
