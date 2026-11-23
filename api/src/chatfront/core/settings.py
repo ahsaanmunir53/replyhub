@@ -108,6 +108,10 @@ class Settings(BaseSettings):
     cerebras_api_key: SecretStr | None = None
     cerebras_base_url: str = "https://api.cerebras.ai/v1"
     cerebras_model: str = "qwen-3.8-27b"
+    # Mistral's free Experiment plan (no card, a verified phone): OpenAI-compatible.
+    mistral_api_key: SecretStr | None = None
+    mistral_base_url: str = "https://api.mistral.ai/v1"
+    mistral_model: str = "mistral-small-latest"
     # Google's Gemini API free tier (no card): OpenAI-compatible endpoint, tried before Groq.
     gemini_api_key: SecretStr | None = None
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"

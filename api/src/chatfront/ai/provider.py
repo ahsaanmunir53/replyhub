@@ -69,7 +69,7 @@ def serialise_message(message: ChatMessage) -> dict[str, Any]:
     return out
 
 
-OPENAI_COMPATIBLE_FREE = frozenset({"groq", "cerebras", "gemini"})
+OPENAI_COMPATIBLE_FREE = frozenset({"groq", "cerebras", "gemini", "mistral"})
 
 
 def closed(schema: Any) -> Any:

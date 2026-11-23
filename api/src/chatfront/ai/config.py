@@ -152,6 +152,17 @@ def spark_endpoints(settings: Settings) -> list[Endpoint]:
                 Decimal(0),
             )
         )
+    if key := _secret(settings.mistral_api_key):  # free Experiment plan: no card, phone check
+        endpoints.append(
+            Endpoint(
+                "mistral",
+                settings.mistral_base_url,
+                key,
+                settings.mistral_model,
+                Decimal(0),
+                Decimal(0),
+            )
+        )
     if key := _secret(settings.gemini_api_key):  # free plan with no card: Google AI Studio
         endpoints.append(
             Endpoint(
