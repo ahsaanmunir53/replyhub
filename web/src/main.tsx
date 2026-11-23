@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { WakeBar } from "./components/WakeBar";
-import { BASE_PATH, COMMERCE } from "./config";
+import { BASE_PATH, BRAND, COMMERCE } from "./config";
 import { LangProvider } from "./lang";
 import { ChatPage } from "./pages/ChatPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
@@ -36,6 +36,7 @@ function RouteEffects() {
 const root = document.getElementById("root");
 if (!root) throw new Error("missing #root");
 
+document.title = BRAND;
 createRoot(root).render(
   <StrictMode>
     <LangProvider>

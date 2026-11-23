@@ -7,6 +7,10 @@ export const BASE_PATH = import.meta.env.BASE_URL;
 
 /** Selling in the chat: the store page, checkout and payment checks. Off for ReplyHub. */
 export const COMMERCE = import.meta.env.VITE_COMMERCE === "true";
+/** The product name: Chatfront sells in chat; ReplyHub answers by the owner's rules. */
+export const BRAND = COMMERCE ? "Chatfront" : "ReplyHub";
+/** The public demo a visitor can chat with before signing up (ReplyHub). */
+export const DEMO_CHAT = "/s/noor-salon/chat";
 
 /** The verified commerce standard every signed receipt and passport follows (feature 72). */
 export const STANDARD_URL =

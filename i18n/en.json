@@ -2090,6 +2090,7 @@
   "owner.sign_in_link": "Your console: {link}\nThe link works for 7 days. Do not share it.",
   "signup.title": "Put your WhatsApp on autopilot",
   "signup.lede": "Your assistant answers customers on WhatsApp by your rules, in their language, and sends you what needs you.",
+  "signup.try_demo": "Try it first: chat with a demo salon's assistant",
   "signup.business_name": "Business name",
   "signup.business_type": "Kind of business",
   "signup.country": "Country",

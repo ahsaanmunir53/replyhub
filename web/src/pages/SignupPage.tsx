@@ -5,7 +5,8 @@ import type { FormEvent } from "react";
 import { api } from "../api";
 import type { SignupIn, SignupOptions } from "../api";
 import { Page, Problem } from "../components/Shell";
-import { BASE_PATH } from "../config";
+import { Link } from "react-router-dom";
+import { BASE_PATH, DEMO_CHAT } from "../config";
 import { useLang } from "../lang";
 
 // The terms and privacy policy, kept with the code so every change is on record.
@@ -43,7 +44,10 @@ export function SignupPage() {
     api.signupOptions().then(
       (found) => {
         setOptions(found);
-        setForm((now) => ({ ...now, business_type: found.business_types[0]?.id ?? "" }));
+        setForm((now) => ({
+          ...now,
+          business_type: found.business_types[0]?.id ?? "",
+        }));
       },
       () => setFailed(true),
     );
@@ -71,6 +75,11 @@ export function SignupPage() {
           {t("signup.title")}
         </h1>
         <p className="start-lede">{t("signup.lede")}</p>
+        <p>
+          <Link className="button button-ghost button-small" to={DEMO_CHAT}>
+            {t("signup.try_demo")}
+          </Link>
+        </p>
         {options && !options.open && <Problem message={t("signup.closed")} />}
         {options?.open && (
           <form className="books-form signup-form" onSubmit={(e) => void submit(e)}>

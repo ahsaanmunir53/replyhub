@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { BRAND } from "../config";
 import { languageOf, statusOf, UI_LANGS } from "../i18n";
 import { useLang } from "../lang";
 import { readOwnerToken } from "../owner";
@@ -131,9 +132,9 @@ export function Wordmark() {
   return (
     <Link to="/" className="wordmark">
       <span className="wordmark-mark" aria-hidden="true">
-        C
+        {BRAND[0]}
       </span>
-      Chatfront
+      {BRAND}
     </Link>
   );
 }
