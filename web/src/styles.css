@@ -7123,11 +7123,12 @@ button {
 
 /* ReplyHub sign-up and getting started. */
 .signup {
-  max-width: 560px;
+  max-width: 920px;
   margin: 0 auto;
 }
 .signup-form {
   margin-top: 16px;
+  max-width: 560px;
 }
 .setup-steps {
   margin: 8px 0 0;
@@ -7287,4 +7288,45 @@ button {
   border-radius: 10px;
   padding: 10px 12px;
   margin: 0 0 10px;
+}
+
+/* Sign-up page explainer */
+.land {
+  margin: 28px 0 8px;
+}
+.land-h2 {
+  font-size: 1.35rem;
+  margin: 32px 0 12px;
+}
+.land-steps {
+  margin: 0;
+  padding-inline-start: 22px;
+  display: grid;
+  gap: 8px;
+}
+.land-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.land-grid > li {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+.land-grid h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+.land-grid p,
+.land-note {
+  margin: 0;
+  color: var(--muted);
+}
+.land-note {
+  margin-bottom: 12px;
 }

@@ -80,6 +80,10 @@ export function SignupPage() {
             {t("signup.try_demo")}
           </Link>
         </p>
+        <Explainer />
+        <h2 id="signup-form" className="land-h2">
+          {t("land.form_title")}
+        </h2>
         {options && !options.open && <Problem message={t("signup.closed")} />}
         {options?.open && (
           <form className="books-form signup-form" onSubmit={(e) => void submit(e)}>
@@ -192,5 +196,54 @@ export function SignupPage() {
         )}
       </section>
     </Page>
+  );
+}
+
+const STEPS = ["land.step1", "land.step2", "land.step3"] as const;
+const FEATURES = [
+  ["land.f1", "land.f1_body"],
+  ["land.f2", "land.f2_body"],
+  ["land.f3", "land.f3_body"],
+  ["land.f4", "land.f4_body"],
+  ["land.f5", "land.f5_body"],
+  ["land.f6", "land.f6_body"],
+] as const;
+const PLANS = [
+  ["plan.basic", "land.basic"],
+  ["plan.pro", "land.pro"],
+  ["plan.business", "land.business"],
+] as const;
+
+/** What ReplyHub is, how it starts, what it does and the plans, before the form. */
+function Explainer() {
+  const { t } = useLang();
+  return (
+    <div className="land">
+      <h2 className="land-h2">{t("land.how")}</h2>
+      <ol className="land-steps">
+        {STEPS.map((step) => (
+          <li key={step}>{t(step)}</li>
+        ))}
+      </ol>
+      <h2 className="land-h2">{t("land.what")}</h2>
+      <ul className="land-grid">
+        {FEATURES.map(([title, body]) => (
+          <li key={title}>
+            <h3>{t(title)}</h3>
+            <p>{t(body)}</p>
+          </li>
+        ))}
+      </ul>
+      <h2 className="land-h2">{t("land.plans")}</h2>
+      <p className="land-note">{t("land.trial")}</p>
+      <ul className="land-grid land-plans">
+        {PLANS.map(([name, body]) => (
+          <li key={name}>
+            <h3>{t(name)}</h3>
+            <p>{t(body)}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
