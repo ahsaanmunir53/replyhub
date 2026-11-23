@@ -23,6 +23,7 @@ from chatfront.core.clock import utcnow
 
 REST_AFTER = 2  # failures in a row
 REST = timedelta(seconds=60)
+LASTING_REST = timedelta(minutes=30)
 MAX_DRILL = timedelta(minutes=30)
 
 
@@ -74,11 +75,18 @@ class Health:
         tired = [endpoint for endpoint in endpoints if resting[endpoint.name] == Why.FAILING]
         return ready + tired
 
-    def failed(self, name: str, error: str) -> None:
+    def failed(self, name: str, error: str, *, lasting: bool = False) -> None:
+        """A failed call. A lasting failure (the host refused the request itself: a wrong key,
+        no credit, a model switched off) rests the endpoint for half an hour at once, so every
+        customer is not kept waiting on a host that cannot answer."""
         state = self._state(name)
         state.failures += 1
         state.last_error = error[:200]
-        if state.failures >= REST_AFTER and state.why != Why.DRILL:
+        if state.why == Why.DRILL:
+            return
+        if lasting:
+            state.resting_until, state.why = self._clock() + LASTING_REST, Why.FAILING
+        elif state.failures >= REST_AFTER:
             state.resting_until, state.why = self._clock() + REST, Why.FAILING
 
     def answered(self, name: str) -> None:

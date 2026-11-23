@@ -23,7 +23,7 @@ from chatfront.ai.config import (
     route,
 )
 from chatfront.ai.factory import build_ai_client
-from chatfront.ai.health import MAX_DRILL, REST, Health, Why
+from chatfront.ai.health import LASTING_REST, MAX_DRILL, REST, Health, Why
 from chatfront.ai.mock import Fixture, MockMiss, MockProvider, load_fixtures, tool_rounds
 from chatfront.ai.prompts import PROMPTS_DIR, load_prompt
 from chatfront.ai.provider import OpenAICompatibleProvider, build_payload, parse_response
@@ -429,6 +429,16 @@ class TestHealth:
         assert (baseten.ready, baseten.why, baseten.last_error) == (False, Why.FAILING, "503 again")
         clock.now += REST
         assert health.order(chain) == [BASETEN, MODAL, FIREWORKS]
+
+    def test_a_host_that_refuses_outright_rests_for_half_an_hour_at_once(self) -> None:
+        clock = Clock()
+        health = Health(clock)
+        health.failed("baseten", "HTTP 400 (model deactivated)", lasting=True)
+        assert health.order((BASETEN, MODAL)) == [MODAL, BASETEN]
+        clock.now += REST
+        assert health.order((BASETEN, MODAL)) == [MODAL, BASETEN]
+        clock.now += LASTING_REST
+        assert health.order((BASETEN, MODAL)) == [BASETEN, MODAL]
 
     def test_one_good_answer_ends_the_rest(self) -> None:
         health = Health(Clock())

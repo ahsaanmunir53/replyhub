@@ -19,6 +19,7 @@ from chatfront.ai.mock import MOCK_ENDPOINT
 from chatfront.ai.provider import Provider
 from chatfront.ai.types import ChatMessage, ChatRequest, ChatResult, JsonSchema, Role, ToolCall
 from chatfront.core.errors import AppError
+from chatfront.core.http import UpstreamError
 from chatfront.core.logging import redact
 
 log = logging.getLogger(__name__)
@@ -115,7 +116,8 @@ class AiClient:
                 result = await self.live.complete(endpoint, req, effort, max_tokens)
             except AppError as exc:  # upstream failures and unreadable answers alike
                 last_error = exc.message
-                self.health.failed(endpoint.name, exc.message)
+                lasting = isinstance(exc, UpstreamError) and not exc.retryable
+                self.health.failed(endpoint.name, exc.message, lasting=lasting)
                 await self._meter(req, endpoint, None, exc.message)
                 log.warning(
                     "%s failed for %s (%s), trying the next endpoint",
