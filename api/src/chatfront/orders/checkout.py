@@ -100,7 +100,7 @@ class CheckoutIn(BaseModel):
     payment_method: Literal["cod", "transfer"]
     coupon: str | None = Field(default=None, max_length=24)
     # assistant: a cart an outside AI assistant put together (feature 66)
-    source: Literal["shop_page", "facebook", "instagram", "assistant"] = "shop_page"
+    source: Literal["shop_page", "facebook", "instagram", "assistant", "phone"] = "shop_page"
     lang: str | None = Field(default=None, max_length=16)
     branch_id: uuid.UUID | None = None
 

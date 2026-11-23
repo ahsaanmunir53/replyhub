@@ -105,6 +105,7 @@ export function PostsPanel({ token, products }: { token: string; products: Owner
         {t("console.posts_title")}
       </h2>
       <p className="posts-lede">{t("console.posts_lede")}</p>
+      <p className="aside">{t("posts.where")}</p>
       {data && posts.length === 0 && <p className="posts-empty">{t("console.posts_empty")}</p>}
       {posts.length > 0 && (
         <ul className="post-list">
@@ -132,11 +133,50 @@ export function PostsPanel({ token, products }: { token: string; products: Owner
                     <span dir="auto"> ({comment.product_name})</span>
                   )}
                 </span>
+                {comment.status !== "sent" && (
+                  <CommentReplyBox token={token} id={comment.id} onSent={refresh} />
+                )}
               </li>
             ))}
           </ul>
         </details>
       )}
     </section>
+  );
+}
+
+/** The owner answers a comment in their own words, as a private message to its writer. */
+function CommentReplyBox({ token, id, onSent }: { token: string; id: string; onSent: () => void }) {
+  const { t } = useLang();
+  const [text, setText] = useState("");
+  const [failed, setFailed] = useState(false);
+  return (
+    <form
+      className="comment-reply"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!text.trim()) return;
+        api.replyToComment(token, id, text.trim()).then(
+          () => {
+            setText("");
+            onSent();
+          },
+          () => setFailed(true),
+        );
+      }}
+    >
+      <input
+        dir="auto"
+        maxLength={1000}
+        aria-label={t("posts.reply_label")}
+        placeholder={t("posts.reply_label")}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <button type="submit" className="button button-ink button-small" disabled={!text.trim()}>
+        {t("posts.reply_send")}
+      </button>
+      {failed && <span role="alert">{t("posts.reply_failed")}</span>}
+    </form>
   );
 }

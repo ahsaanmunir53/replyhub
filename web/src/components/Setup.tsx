@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { OwnerMe } from "../api";
 import type { Key } from "../i18n";
+import { Link } from "react-router-dom";
 import { useLang } from "../lang";
 
 export function SetupPanel({ me, token }: { me: OwnerMe; token: string }) {
@@ -25,15 +26,15 @@ export function SetupPanel({ me, token }: { me: OwnerMe; token: string }) {
   }, [token, reports]);
 
   const steps: { key: Key; done: boolean; href: string; note?: Key }[] = [
-    { key: "setup.rules", done: rules === true, href: "#sec-rules" },
+    { key: "setup.rules", done: rules === true, href: "/owner/rules" },
     {
       key: "setup.whatsapp",
       done: me.whatsapp_connected === true,
-      href: "#sec-settings",
+      href: "/owner/connections",
       note: "setup.whatsapp_note",
     },
-    ...(reports ? [{ key: "setup.store" as Key, done: store === true, href: "#sec-store" }] : []),
-    { key: "setup.try", done: false, href: `s/${me.slug}/chat` },
+    ...(reports ? [{ key: "setup.store" as Key, done: store === true, href: "/owner/store" }] : []),
+    { key: "setup.try", done: false, href: `/s/${me.slug}/chat` },
   ];
   const needed = steps.filter((s) => s.key !== "setup.try");
   if (rules === null || needed.every((s) => s.done)) return null;
@@ -45,7 +46,7 @@ export function SetupPanel({ me, token }: { me: OwnerMe; token: string }) {
       <ol className="setup-steps">
         {steps.map((step) => (
           <li key={step.key} className={step.done ? "done" : undefined}>
-            <a href={step.href}>{t(step.key)}</a>
+            <Link to={step.href}>{t(step.key)}</Link>
             {step.done && <span className="aside"> {t("setup.done")}</span>}
             {!step.done && step.note && <p className="aside">{t(step.note)}</p>}
           </li>

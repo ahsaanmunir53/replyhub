@@ -7,14 +7,15 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import ColumnElement, case, func, select
 
 from chatfront.audit.service import Actor, ActorType, record
 from chatfront.catalog.models import Product
-from chatfront.channels.comments import answer_waiting
-from chatfront.channels.models import CommentStatus, PostComment, SocialPost
+from chatfront.channels.comments import _send_text, answer_waiting
+from chatfront.channels.models import ChannelAccount, CommentStatus, PostComment, SocialPost
 from chatfront.core.errors import AppError, NotFound
+from chatfront.core.models import Tenant
 from chatfront.owner.routes import ChatsDep, ServicesDep
 
 router = APIRouter(prefix="/api/owner/posts")
@@ -129,3 +130,36 @@ async def set_product(
         )
     queued = await answer_waiting(services, session.tenant_id, post_id) if body.product_id else 0
     return {"answering": queued}
+
+
+class CommentReply(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+
+
+@router.post("/comments/{comment_id}/reply")
+async def reply_to_comment(
+    comment_id: uuid.UUID, body: CommentReply, session: ChatsDep, services: ServicesDep
+) -> dict[str, str]:
+    """Answer a comment yourself, as a private message to the person who wrote it. Meta allows
+    one private reply per comment; the chat it starts then lands in the inbox like any other."""
+    async with services.db.tenant(session.tenant_id) as db:
+        row = await db.get(PostComment, comment_id)
+        if row is None:
+            raise NotFound("comment")
+        if row.status == CommentStatus.SENT:
+            raise AppError("already_answered", "This comment already got its private reply")
+        account = await db.get(ChannelAccount, row.channel_account_id)
+        tenant = await db.get(Tenant, session.tenant_id)
+        await record(
+            db,
+            session.tenant_id,
+            Actor(ActorType.STAFF, str(session.staff_id)),
+            "post.comment_reply",
+            entity=("comment", str(comment_id)),
+        )
+    if account is None or tenant is None:
+        raise NotFound("comment")
+    await _send_text(services, tenant, account, row, body.text, None)
+    async with services.db.tenant(session.tenant_id) as db:
+        done = await db.get(PostComment, comment_id)
+    return {"status": str(done.status) if done else "unknown"}

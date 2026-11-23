@@ -32,6 +32,7 @@ export function ConnectionsPanel({
   const { t } = useLang();
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sellFailed, setSellFailed] = useState(false);
   const has = (feature: string) => (me.features ?? []).includes(feature);
   const chatUrl = `${window.location.origin}/s/${me.slug}/chat`;
   const button =
@@ -80,12 +81,16 @@ export function ConnectionsPanel({
 
   const toggleSelling = () => {
     setBusy(true);
+    setSellFailed(false);
     api.setSelling(token, !me.selling).then(
       () => {
         setBusy(false);
         onChanged();
       },
-      () => setBusy(false),
+      () => {
+        setBusy(false);
+        setSellFailed(true);
+      },
     );
   };
 
@@ -138,6 +143,19 @@ export function ConnectionsPanel({
         <div className="conn-block">
           <h3>{t("conn.selling_title")}</h3>
           <p>{t("conn.selling_body")}</p>
+          <p className={me.selling ? "pill pill-on" : "pill"}>
+            {t(me.selling ? "conn.selling_is_on" : "conn.selling_is_off")}
+          </p>
+          {me.selling && (
+            <ul className="conn-how">
+              <li>{t("conn.selling_how1")}</li>
+              <li>{t("conn.selling_how2")}</li>
+              <li>
+                <Link to="/owner/orders">{t("conn.selling_how3")}</Link>
+              </li>
+            </ul>
+          )}
+          {sellFailed && <p role="alert">{t("conn.selling_failed")}</p>}
           {canChange && (
             <button
               type="button"

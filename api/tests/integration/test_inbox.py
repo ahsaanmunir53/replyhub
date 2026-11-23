@@ -224,3 +224,34 @@ async def test_the_dashboard_counts_chats_per_day_channel_and_department(
     assert sum(chats["channels"].values()) == 1
     assert len(chats["daily"]) == 7
     assert chats["daily"][-1]["chats"] == 1
+
+
+async def test_an_order_taken_on_the_phone_is_typed_in_and_joins_the_orders(
+    app: tuple[Client, Services],
+) -> None:
+    client, services = app
+    owner = await owner_auth(services)
+    products = (await client.get("/api/owner/products", headers=owner)).json()
+    variant = next(p for p in products if p["status"] == "active")["variants"][0]["id"]
+    placed = await client.post(
+        "/api/owner/orders/phone",
+        json={
+            "lines": [{"variant_id": variant, "quantity": 1}],
+            "details": {
+                "name": "Hina Ahmed",
+                "phone": "03001234567",
+                "city": "Lahore",
+                "address": "House 12, Street 4",
+                "area": "Gulberg",
+            },
+        },
+        headers=owner,
+    )
+    assert placed.status_code == 200, placed.text
+    code = placed.json()["code"]
+    from chatfront.orders.models import Order
+
+    async with services.db.system() as session:
+        order = await session.scalar(select(Order).where(Order.code == code))
+    assert order is not None
+    assert order.source == "phone"

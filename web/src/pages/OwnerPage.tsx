@@ -30,6 +30,7 @@ import { CouriersPanel } from "../components/Couriers";
 import { CustomRequestsPanel } from "../components/Custom";
 import { DashboardPanel } from "../components/Dashboard";
 import { DepartmentsPanel } from "../components/Departments";
+import { PhoneOrderPanel } from "../components/PhoneOrder";
 import { FraudReportsPanel, FraudReviewPanel } from "../components/Fraud";
 import { ImportsPanel } from "../components/Imports";
 import { InboxPanel } from "../components/Inbox";
@@ -489,6 +490,9 @@ function Console({
       show: can("orders") || can("ship") || can("books"),
       children: (
         <>
+          {can("orders") && !COMMERCE && (
+            <PhoneOrderPanel token={token} products={products ?? []} onAdded={orders.refresh} />
+          )}
           {can("orders") && (
             <OrdersPanel me={me} token={token} orders={orders.orders} onChange={orders.refresh} />
           )}

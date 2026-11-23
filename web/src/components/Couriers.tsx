@@ -408,6 +408,7 @@ export function CouriersPanel({
         {t("console.couriers_title")}
       </h2>
       <p className="aside">{t("console.couriers_lede")}</p>
+      <p className="aside">{t("couriers.optional")}</p>
       <div className="pay-columns">
         {accounts.length > 0 && (
           <div className="pay-block">

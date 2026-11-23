@@ -1535,7 +1535,23 @@ export const api = {
       headers: bearer(token),
       body: JSON.stringify({ staff_id: staffId }),
     }),
+  addPhoneOrder: (
+    token: string,
+    lines: { variant_id: string; quantity: number }[],
+    details: { name: string; phone: string; city: string; address: string; area: string },
+  ) =>
+    call<{ code: string; total: number }>("/api/owner/orders/phone", {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify({ lines, details }),
+    }),
   posts: (token: string) => call<Posts>("/api/owner/posts", { headers: bearer(token) }),
+  replyToComment: (token: string, commentId: string, text: string) =>
+    call<{ status: string }>(`/api/owner/posts/comments/${encodeURIComponent(commentId)}/reply`, {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify({ text }),
+    }),
   setPostProduct: (token: string, postId: string, productId: string | null) =>
     call<{ answering: number }>(`/api/owner/posts/${encodeURIComponent(postId)}/product`, {
       method: "PUT",

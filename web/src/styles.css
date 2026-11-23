@@ -1410,10 +1410,10 @@ button {
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  border: 1.5px solid var(--ink-raised);
+  border: 1.5px solid #1f6fd1;
   border-radius: 999px;
   background: none;
-  color: var(--ink-raised);
+  color: #1f6fd1;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -2380,7 +2380,7 @@ button {
 }
 
 .wording-langs [aria-checked="true"] {
-  border-color: var(--ink);
+  border-color: var(--text);
   background: var(--ink);
   color: var(--on-ink);
 }
@@ -4195,7 +4195,7 @@ button {
 }
 
 .khata-kinds [aria-checked="true"] {
-  border-color: var(--ink);
+  border-color: var(--text);
   background: var(--ink);
   color: var(--on-ink);
 }
@@ -4666,7 +4666,7 @@ button {
 }
 
 .batch-edit .action-primary {
-  border-color: var(--ink);
+  border-color: var(--text);
   background: var(--ink);
   color: var(--on-ink);
 }
@@ -5205,12 +5205,12 @@ button {
 }
 
 .checkout-pay label:has(input:checked) {
-  border-color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 6%, var(--card));
+  border-color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, var(--card));
 }
 
 .checkout-pay input {
-  accent-color: var(--ink);
+  accent-color: #1f6fd1;
 }
 
 .checkout-place {
@@ -5372,7 +5372,7 @@ button {
 .offer-check input {
   width: 18px;
   height: 18px;
-  accent-color: var(--ink);
+  accent-color: #1f6fd1;
 }
 
 .offer-products {
@@ -6009,7 +6009,7 @@ button {
 }
 
 .segment-filter .chip[aria-pressed="true"] {
-  border-color: var(--ink);
+  border-color: var(--text);
   background: var(--ink);
   color: var(--on-ink);
 }
@@ -6294,7 +6294,7 @@ button {
   border: 1px solid var(--rule);
   border-radius: 999px;
   background: var(--card);
-  color: var(--ink);
+  color: var(--text);
   padding: 7px 10px;
   font-size: 13px;
   font-weight: 700;
@@ -7853,4 +7853,122 @@ button {
     grid-column: 1 / -1;
     grid-row: 2;
   }
+}
+
+/* --- Landing: form on top, why section; phone orders; comment replies ------------------ */
+.land-top {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .land-top {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+
+.land-form {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.land-form .land-h2 {
+  margin-top: 0;
+}
+
+.land-points {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding-inline-start: 20px;
+}
+
+.why {
+  margin: 36px 0;
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.why-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.why-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.why-before,
+.why-after {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+.why-before {
+  background: #fdecea;
+}
+
+.why-after {
+  background: #e6f6ef;
+}
+
+.why-before span,
+.why-after span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.why-gap {
+  padding: 16px;
+  border-inline-start: 4px solid var(--c1);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.why-gap h3 {
+  margin: 0 0 6px;
+}
+
+.phone-order summary {
+  cursor: pointer;
+}
+
+.phone-line {
+  display: grid;
+  grid-template-columns: 1fr 80px;
+  gap: 8px;
+}
+
+.comment-reply {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.comment-reply input {
+  flex: 1 1 180px;
+  min-height: 36px;
+}
+
+.conn-how {
+  margin: 8px 0;
+  padding-inline-start: 20px;
 }

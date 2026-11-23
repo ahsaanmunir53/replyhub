@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { api } from "../api";
 import type { SignupIn, SignupOptions } from "../api";
 import { PlanTour } from "../components/PlanTour";
+import { WhyReplyHub } from "../components/WhyReplyHub";
 import { Page, Problem } from "../components/Shell";
 import { Link } from "react-router-dom";
 import { BASE_PATH, DEMO_CHAT } from "../config";
@@ -72,146 +73,158 @@ export function SignupPage() {
   return (
     <Page>
       <section className="signup" aria-labelledby="signup-title">
-        <h1 id="signup-title" className="start-title">
-          {t("signup.title")}
-        </h1>
-        <p className="start-lede">{t("signup.lede")}</p>
-        <p className="signup-top">
-          <Link className="button button-ghost button-small" to={DEMO_CHAT}>
-            {t("signup.try_demo")}
-          </Link>
-          <Link className="button button-ink button-small" to="/login">
-            {t("signup.have_account")}
-          </Link>
-        </p>
+        <div className="land-top">
+          <div className="land-intro">
+            <h1 id="signup-title" className="start-title">
+              {t("signup.title")}
+            </h1>
+            <p className="start-lede">{t("signup.lede")}</p>
+            <p className="signup-top">
+              <Link className="button button-ghost button-small" to={DEMO_CHAT}>
+                {t("signup.try_demo")}
+              </Link>
+              <Link className="button button-ink button-small" to="/login">
+                {t("signup.have_account")}
+              </Link>
+            </p>
+            <ul className="land-points">
+              <li>{t("why.point1")}</li>
+              <li>{t("why.point2")}</li>
+              <li>{t("why.point3")}</li>
+            </ul>
+          </div>
+          <div className="land-form">
+            <h2 id="signup-form" className="land-h2">
+              {t("land.form_title")}
+            </h2>
+            {options && !options.open && <Problem message={t("signup.closed")} />}
+            {options?.open && (
+              <form className="books-form signup-form" onSubmit={(e) => void submit(e)}>
+                <label>
+                  {t("signup.business_name")}
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    dir="auto"
+                    value={form.business_name}
+                    onChange={(e) => set({ business_name: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("signup.business_type")}
+                  <select
+                    value={form.business_type}
+                    onChange={(e) => set({ business_type: e.target.value })}
+                  >
+                    {options.business_types.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t("signup.country")}
+                  <select value={form.country} onChange={(e) => set({ country: e.target.value })}>
+                    {options.countries.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t("signup.city")}
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={80}
+                    dir="auto"
+                    value={form.city}
+                    onChange={(e) => set({ city: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("signup.owner_name")}
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={80}
+                    dir="auto"
+                    autoComplete="name"
+                    value={form.owner_name}
+                    onChange={(e) => set({ owner_name: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("signup.email")}
+                  <input
+                    required
+                    type="email"
+                    maxLength={160}
+                    autoComplete="email"
+                    value={form.email}
+                    onChange={(e) => set({ email: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("login.password")}
+                  <input
+                    required
+                    type="password"
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    value={form.password ?? ""}
+                    onChange={(e) => set({ password: e.target.value })}
+                  />
+                  <small className="aside">{t("signup.password_hint")}</small>
+                </label>
+                <label>
+                  {t("signup.whatsapp")}
+                  <input
+                    required
+                    type="tel"
+                    inputMode="tel"
+                    maxLength={24}
+                    autoComplete="tel"
+                    value={form.whatsapp}
+                    onChange={(e) => set({ whatsapp: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("signup.lang")}
+                  <select value={form.lang} onChange={(e) => set({ lang: e.target.value })}>
+                    {LANGS.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="aside">{t("signup.plan_note")}</p>
+                <p className="aside">
+                  {t("signup.agree")}{" "}
+                  <a href={`${DOCS}/TERMS.md`} target="_blank" rel="noreferrer">
+                    {t("signup.terms")}
+                  </a>
+                  {" · "}
+                  <a href={`${DOCS}/PRIVACY.md`} target="_blank" rel="noreferrer">
+                    {t("signup.privacy")}
+                  </a>
+                </p>
+                {failed && <Problem message={t("signup.failed")} />}
+                <button type="submit" className="button button-ink" disabled={busy}>
+                  {t("signup.submit")}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+        <WhyReplyHub />
         <Explainer />
         <PlanTour />
-        <h2 id="signup-form" className="land-h2">
-          {t("land.form_title")}
-        </h2>
-        {options && !options.open && <Problem message={t("signup.closed")} />}
-        {options?.open && (
-          <form className="books-form signup-form" onSubmit={(e) => void submit(e)}>
-            <label>
-              {t("signup.business_name")}
-              <input
-                required
-                minLength={2}
-                maxLength={120}
-                dir="auto"
-                value={form.business_name}
-                onChange={(e) => set({ business_name: e.target.value })}
-              />
-            </label>
-            <label>
-              {t("signup.business_type")}
-              <select
-                value={form.business_type}
-                onChange={(e) => set({ business_type: e.target.value })}
-              >
-                {options.business_types.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t("signup.country")}
-              <select value={form.country} onChange={(e) => set({ country: e.target.value })}>
-                {options.countries.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t("signup.city")}
-              <input
-                required
-                minLength={2}
-                maxLength={80}
-                dir="auto"
-                value={form.city}
-                onChange={(e) => set({ city: e.target.value })}
-              />
-            </label>
-            <label>
-              {t("signup.owner_name")}
-              <input
-                required
-                minLength={2}
-                maxLength={80}
-                dir="auto"
-                autoComplete="name"
-                value={form.owner_name}
-                onChange={(e) => set({ owner_name: e.target.value })}
-              />
-            </label>
-            <label>
-              {t("signup.email")}
-              <input
-                required
-                type="email"
-                maxLength={160}
-                autoComplete="email"
-                value={form.email}
-                onChange={(e) => set({ email: e.target.value })}
-              />
-            </label>
-            <label>
-              {t("login.password")}
-              <input
-                required
-                type="password"
-                minLength={8}
-                maxLength={128}
-                autoComplete="new-password"
-                value={form.password ?? ""}
-                onChange={(e) => set({ password: e.target.value })}
-              />
-              <small className="aside">{t("signup.password_hint")}</small>
-            </label>
-            <label>
-              {t("signup.whatsapp")}
-              <input
-                required
-                type="tel"
-                inputMode="tel"
-                maxLength={24}
-                autoComplete="tel"
-                value={form.whatsapp}
-                onChange={(e) => set({ whatsapp: e.target.value })}
-              />
-            </label>
-            <label>
-              {t("signup.lang")}
-              <select value={form.lang} onChange={(e) => set({ lang: e.target.value })}>
-                {LANGS.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="aside">{t("signup.plan_note")}</p>
-            <p className="aside">
-              {t("signup.agree")}{" "}
-              <a href={`${DOCS}/TERMS.md`} target="_blank" rel="noreferrer">
-                {t("signup.terms")}
-              </a>
-              {" · "}
-              <a href={`${DOCS}/PRIVACY.md`} target="_blank" rel="noreferrer">
-                {t("signup.privacy")}
-              </a>
-            </p>
-            {failed && <Problem message={t("signup.failed")} />}
-            <button type="submit" className="button button-ink" disabled={busy}>
-              {t("signup.submit")}
-            </button>
-          </form>
-        )}
       </section>
     </Page>
   );

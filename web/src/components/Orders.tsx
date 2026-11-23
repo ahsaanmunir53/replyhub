@@ -583,6 +583,7 @@ export function OrdersPanel({
         {t("console.orders_title")}
         <span className="console-count">{orders.length}</span>
       </h2>
+      <p className="aside">{t("orders.where")}</p>
       {me.rights.includes("ship") && <PickListPanel token={token} />}
       {orders.length === 0 ? (
         <p className="aside">{t("console.orders_none")}</p>

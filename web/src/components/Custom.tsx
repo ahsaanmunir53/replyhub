@@ -162,6 +162,7 @@ export function CustomRequestsPanel({
         {waiting > 0 && <span className="console-count">{waiting}</span>}
       </h2>
       <p className="aside">{t("console.custom_lede")}</p>
+      <p className="aside">{t("custom.not_phone")}</p>
       {data.length === 0 ? (
         <p className="aside">{t("console.custom_none")}</p>
       ) : (
