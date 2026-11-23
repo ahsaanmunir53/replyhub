@@ -5,7 +5,7 @@ const KEY = "chatfront.owner";
 
 export function readOwnerToken(): string | null {
   try {
-    return sessionStorage.getItem(KEY);
+    return localStorage.getItem(KEY);
   } catch {
     return null;
   }
@@ -13,15 +13,15 @@ export function readOwnerToken(): string | null {
 
 export function saveOwnerToken(token: string): void {
   try {
-    sessionStorage.setItem(KEY, token);
+    localStorage.setItem(KEY, token);
   } catch {
-    // Private windows can refuse storage; the console then lasts for this page only.
+    // Private windows can refuse storage; the console then lasts for this tab only.
   }
 }
 
 export function clearOwnerToken(): void {
   try {
-    sessionStorage.removeItem(KEY);
+    localStorage.removeItem(KEY);
   } catch {
     // Nothing stored, nothing to clear.
   }

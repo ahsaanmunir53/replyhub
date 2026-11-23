@@ -140,6 +140,8 @@ class Settings(BaseSettings):
     supabase_bucket: str = "chatfront-media"
     max_upload_bytes: int = 20 * 1024 * 1024
     signed_url_ttl_seconds: int = 3600
+    # Seconds a public shop page and product list are kept per worker (0 = off).
+    public_cache_seconds: int = Field(default=0, ge=0, le=600)
 
     # Behaviour.
     worker_enabled: bool = True

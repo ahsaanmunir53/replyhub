@@ -57,3 +57,18 @@ class AssistantUsage(Base):
     warned: Mapped[bool] = mapped_column(default=False)  # the owner was told it is nearly used
     stopped: Mapped[bool] = mapped_column(default=False)  # the owner was told it is used up
     created_at: Mapped[datetime] = created_at_column()
+
+
+class Department(Base):
+    """A team inside the business, such as Sales or Delivery. A chat whose words match one of
+    its keywords goes to it, and a chat handed to a person goes to one of its members."""
+
+    __tablename__ = "departments"
+
+    id: Mapped[uuid.UUID] = id_column()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(60))
+    keywords: Mapped[list[Any]] = mapped_column(default=list)
+    created_at: Mapped[datetime] = created_at_column()

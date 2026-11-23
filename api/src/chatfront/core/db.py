@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, MetaData, func, select, text
+from sqlalchemy import DateTime, MetaData, func, select
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -59,7 +59,12 @@ def created_at_column() -> Mapped[datetime]:
 class Database:
     def __init__(self, url: str, *, pool_size: int = 5) -> None:
         self.engine: AsyncEngine = create_async_engine(
-            url, pool_size=pool_size, max_overflow=pool_size, pool_pre_ping=True
+            # No ping before each use: on a far database every ping is a full round trip.
+            # Connections are recycled before a host's idle timeout closes them instead.
+            url,
+            pool_size=pool_size,
+            max_overflow=pool_size,
+            pool_recycle=240,
         )
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
 
@@ -67,8 +72,13 @@ class Database:
     async def tenant(self, tenant_id: uuid.UUID) -> AsyncIterator[AsyncSession]:
         """A transaction that can only see and write rows of one tenant."""
         async with self.sessions() as session, session.begin():
-            await session.execute(text(f"SET LOCAL ROLE {APP_ROLE}"))
-            await session.execute(select(func.set_config("app.tenant_id", str(tenant_id), True)))
+            # One statement, one round trip: set_config('role', ..., true) is SET LOCAL ROLE.
+            await session.execute(
+                select(
+                    func.set_config("role", APP_ROLE, True),
+                    func.set_config("app.tenant_id", str(tenant_id), True),
+                )
+            )
             yield session
 
     @asynccontextmanager

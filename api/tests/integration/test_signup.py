@@ -134,3 +134,58 @@ async def test_sign_ups_a_day_are_capped(
     assert (await client.post("/api/signup", json=FORM)).status_code == 200
     full = await client.post("/api/signup", json={**FORM, "business_name": "Second Shop"})
     assert full.status_code == 429
+
+
+async def test_an_owner_signs_in_again_with_email_and_password(
+    replyhub: tuple[Client, Services],
+) -> None:
+    client, _ = replyhub
+    made = (await client.post("/api/signup", json={**FORM, "password": "noor-perfume-9"})).json()
+    me = await client.get("/api/owner/me", headers={"Authorization": f"Bearer {made['token']}"})
+    assert me.json()["has_password"] is True
+    wrong = await client.post(
+        "/api/owner/login", json={"email": "SARA@alnoor.example", "password": "nope"}
+    )
+    assert wrong.status_code == 401
+    good = (
+        await client.post(
+            "/api/owner/login", json={"email": "SARA@alnoor.example", "password": "noor-perfume-9"}
+        )
+    ).json()
+    assert good["slug"] == made["slug"]
+    assert good["token"]
+    # A second business with the same email and password: the person picks one.
+    second = (
+        await client.post(
+            "/api/signup",
+            json={**FORM, "business_name": "Noor Two", "password": "noor-perfume-9"},
+        )
+    ).json()
+    both = (
+        await client.post(
+            "/api/owner/login", json={"email": "sara@alnoor.example", "password": "noor-perfume-9"}
+        )
+    ).json()
+    assert both["token"] is None
+    assert {s["slug"] for s in both["shops"]} == {
+        made["slug"],
+        second["slug"],
+    }
+    picked = (
+        await client.post(
+            "/api/owner/login",
+            json={"email": "sara@alnoor.example", "password": "noor-perfume-9", "shop": "noor-two"},
+        )
+    ).json()
+    assert picked["slug"] == "noor-two"
+    # Changing the password needs the current one.
+    head = {"Authorization": f"Bearer {picked['token']}"}
+    assert (
+        await client.put("/api/owner/password", headers=head, json={"password": "another-pass-1"})
+    ).status_code == 403
+    changed = await client.put(
+        "/api/owner/password",
+        headers=head,
+        json={"password": "another-pass-1", "current": "noor-perfume-9"},
+    )
+    assert changed.status_code == 200

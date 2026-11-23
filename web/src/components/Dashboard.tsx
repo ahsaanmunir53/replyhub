@@ -8,6 +8,7 @@ import { api } from "../api";
 import type { Dashboard, DashboardDays, OwnerMe } from "../api";
 import { languageOf, localeOf } from "../i18n";
 import type { Key } from "../i18n";
+import { ChatsBoard } from "./ChatsBoard";
 import { useLang } from "../lang";
 import { formatMoney } from "../money";
 import { usePolled } from "../usePolled";
@@ -441,6 +442,7 @@ export function DashboardPanel({ me, token }: { me: OwnerMe; token: string }) {
       </div>
       {data && (
         <div className={`dash-body${current ? "" : " is-loading"}`} aria-busy={!current}>
+          {data.chats && <ChatsBoard chats={data.chats} />}
           {(data.orders || data.daily) && (
             <div className="dash-lead">
               {data.orders && (

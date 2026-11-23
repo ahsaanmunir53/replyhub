@@ -104,7 +104,7 @@ export function ConnectionsPanel({
               </div>
               <p>{t(card.body)}</p>
               {locked ? (
-                <Link to="/owner/overview" className="button button-ghost button-small">
+                <Link to="/how-it-works" className="button button-ghost button-small">
                   {t("conn.see_plans")}
                 </Link>
               ) : (

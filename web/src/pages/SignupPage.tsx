@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api";
 import type { SignupIn, SignupOptions } from "../api";
+import { PlanTour } from "../components/PlanTour";
 import { Page, Problem } from "../components/Shell";
 import { Link } from "react-router-dom";
 import { BASE_PATH, DEMO_CHAT } from "../config";
@@ -75,12 +76,16 @@ export function SignupPage() {
           {t("signup.title")}
         </h1>
         <p className="start-lede">{t("signup.lede")}</p>
-        <p>
+        <p className="signup-top">
           <Link className="button button-ghost button-small" to={DEMO_CHAT}>
             {t("signup.try_demo")}
           </Link>
+          <Link className="button button-ink button-small" to="/login">
+            {t("signup.have_account")}
+          </Link>
         </p>
         <Explainer />
+        <PlanTour />
         <h2 id="signup-form" className="land-h2">
           {t("land.form_title")}
         </h2>
@@ -154,6 +159,19 @@ export function SignupPage() {
                 value={form.email}
                 onChange={(e) => set({ email: e.target.value })}
               />
+            </label>
+            <label>
+              {t("login.password")}
+              <input
+                required
+                type="password"
+                minLength={8}
+                maxLength={128}
+                autoComplete="new-password"
+                value={form.password ?? ""}
+                onChange={(e) => set({ password: e.target.value })}
+              />
+              <small className="aside">{t("signup.password_hint")}</small>
             </label>
             <label>
               {t("signup.whatsapp")}

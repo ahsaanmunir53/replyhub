@@ -4,6 +4,8 @@ local media files, and the operator setting a business's plan."""
 from __future__ import annotations
 
 import mimetypes
+import re
+import time
 from datetime import datetime
 from typing import Annotated, Literal
 
@@ -51,10 +53,27 @@ async def live() -> dict[str, bool]:
 
 @router.get("/health")
 async def health(services: ServicesDep) -> dict[str, object]:
+    started = time.perf_counter()
     async with services.db.system() as session:
         await session.execute(text("SELECT 1"))
+    db_ms = round((time.perf_counter() - started) * 1000)
     endpoints = [endpoint.name for endpoint in services.ai.endpoints()]
-    return {"ok": True, "models": services.ai.mode, "endpoints": endpoints}
+    return {
+        "ok": True,
+        "models": services.ai.mode,
+        "endpoints": endpoints,
+        # How long one database transaction took, and where the database is, from its host
+        # name: far apart, every page waits on each round trip.
+        "db_ms": db_ms,
+        "db_region": db_region(services.settings.database_url),
+    }
+
+
+def db_region(url: str) -> str | None:
+    """The cloud region in a Neon or Supabase host name, never any other part of the URL."""
+    host = url.partition("@")[2].partition("/")[0].partition(":")[0]
+    found = re.search(r"([a-z]{2}-[a-z]+-\d)", host)
+    return found.group(1) if found else None
 
 
 @router.post("/internal/cron")

@@ -242,6 +242,11 @@ async def start_handover(
         assert conversation is not None
         conversation.status = HANDOVER
         conversation.assigned_staff_id = taken_by
+        if taken_by is None and conversation.department_id is not None:
+            from chatfront.owner.departments import member_for
+
+            # Handed over like a ticket: to the department member with the fewest open chats.
+            conversation.assigned_staff_id = await member_for(session, conversation.department_id)
         handover = Handover(
             tenant_id=tenant.id,
             conversation_id=conversation_id,

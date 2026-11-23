@@ -63,7 +63,9 @@ function Thread({ token, item }: { token: string; item: InboxItem }) {
     if (!text) return;
     setFailed(false);
     try {
-      await api.staffReply(token, chatId, text);
+      // From any chat: one the assistant still has is taken first, then the reply goes out.
+      if (item.state === "person") await api.staffReply(token, chatId, text);
+      else await api.sendChat(token, chatId, text);
       setDraft("");
       load();
     } catch {
@@ -71,7 +73,7 @@ function Thread({ token, item }: { token: string; item: InboxItem }) {
     }
   }
 
-  const canReply = item.state !== "assistant" && item.window_open;
+  const canReply = item.window_open;
   return (
     <div className="inbox-chat">
       <ol className="inbox-thread" aria-label={t("console.inbox_thread")}>
@@ -90,8 +92,8 @@ function Thread({ token, item }: { token: string; item: InboxItem }) {
           </li>
         ))}
       </ol>
-      {item.state === "assistant" ? (
-        <p className="inbox-note">{t("console.inbox_take_to_reply")}</p>
+      {item.state === "assistant" && item.window_open ? (
+        <p className="inbox-note">{t("inbox.reply_any")}</p>
       ) : !item.window_open ? (
         <p className="inbox-note">{t("console.inbox_window_closed")}</p>
       ) : null}
@@ -175,6 +177,7 @@ function OpenChat({
           )}
         </p>
         <p className={`inbox-state is-${item.state}`}>{stateText(t, item)}</p>
+        {item.department && <p className="inbox-dept">{item.department}</p>}
       </header>
       {item.summary && (
         <p className="inbox-summary" dir="auto">
@@ -234,8 +237,12 @@ export function InboxPanel({ me, token }: { me: OwnerMe; token: string }) {
   const when = useWhen();
   const [show, setShow] = useState<InboxShow>("all");
   const [channel, setChannel] = useState("");
+  const [department, setDepartment] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const load = useCallback(() => api.inbox(token, show, channel), [token, show, channel]);
+  const load = useCallback(
+    () => api.inbox(token, show, channel, department),
+    [token, show, channel, department],
+  );
   const { data, refresh } = usePolled(load, POLL_MS);
   const items = data?.items ?? [];
   const open = items.find((item) => item.conversation_id === openId) ?? null;
@@ -280,6 +287,19 @@ export function InboxPanel({ me, token }: { me: OwnerMe; token: string }) {
             ))}
           </select>
         </label>
+        {(data?.departments ?? []).length > 0 && (
+          <label className="inbox-channel">
+            <span className="sr-only">{t("inbox.department")}</span>
+            <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+              <option value="">{t("inbox.all_departments")}</option>
+              {(data?.departments ?? []).map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       <div className="inbox-grid">
         {items.length === 0 ? (
@@ -297,6 +317,7 @@ export function InboxPanel({ me, token }: { me: OwnerMe; token: string }) {
                   <span className="inbox-row-head">
                     <strong dir="auto">{item.customer ?? t("console.customer_label")}</strong>
                     <span className="inbox-row-channel">{channelName(t, item.channel)}</span>
+                    {item.department && <span className="inbox-row-dept">{item.department}</span>}
                     {item.last && (
                       <time dateTime={item.last.at} className="inbox-row-time">
                         {when(item.last.at)}

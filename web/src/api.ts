@@ -126,8 +126,14 @@ export type SignupIn = {
   email: string;
   whatsapp: string;
   lang: string;
+  password?: string;
 };
 export type SignedUp = { slug: string; token: string; console_url: string };
+export type LoggedIn = {
+  token: string | null;
+  slug: string | null;
+  shops: { slug: string; name: string }[];
+};
 
 /** The business's website store (ReplyHub, Pro plan). The key is never sent back. */
 export type StoreToday = {
@@ -305,6 +311,7 @@ export type OwnerMe = {
   whatsapp_connected?: boolean; // ReplyHub onboarding
   channels?: string[]; // the chat apps connected
   selling?: boolean; // the assistant takes orders in the chat
+  has_password?: boolean; // false: ask the person to set one, to sign in again later
 };
 export type OwnerProduct = {
   id: string;
@@ -397,6 +404,7 @@ export type InboxItem = {
     at: string;
   } | null;
   window_open: boolean;
+  department?: string | null;
 };
 export type SocialPost = {
   id: string;
@@ -435,6 +443,7 @@ export type Inbox = {
   waiting: number;
   people: InboxPerson[];
   can_assign: boolean;
+  departments?: { id: string; name: string }[];
 };
 export type ConsoleMessage = {
   id: string;
@@ -1135,8 +1144,33 @@ export type Batch = {
 export type DiscardReason = "expired" | "damaged" | "lost";
 export type DashboardDays = 1 | 7 | 30;
 export type Usage = { calls: number; failed: number; tokens: number; cost_millipaisa: number };
+export type Department = {
+  id: string;
+  name: string;
+  keywords: string[];
+  members: string[];
+  open_chats: number;
+};
+export type ChatDay = {
+  day: string;
+  chats: number;
+  incoming: number;
+  assistant: number;
+  staff: number;
+};
 export type Dashboard = {
   period: { days: DashboardDays; start: string; end: string };
+  chats?: {
+    chats: number;
+    incoming: number;
+    assistant: number;
+    staff: number;
+    handed_over: number;
+    waiting: number;
+    channels: Record<string, number>;
+    departments: Record<string, number>;
+    daily: ChatDay[];
+  } | null;
   orders: {
     placed: number;
     value: number;
@@ -1482,8 +1516,12 @@ export const api = {
   me: (token: string) => call<OwnerMe>("/api/owner/me", { headers: bearer(token) }),
   ownerProducts: (token: string) =>
     call<OwnerProduct[]>("/api/owner/products", { headers: bearer(token) }),
-  inbox: (token: string, show: InboxShow, channel: string) => {
-    const query = new URLSearchParams({ show, ...(channel ? { channel } : {}) });
+  inbox: (token: string, show: InboxShow, channel: string, department = "") => {
+    const query = new URLSearchParams({
+      show,
+      ...(channel ? { channel } : {}),
+      ...(department ? { department } : {}),
+    });
     return call<Inbox>(`/api/owner/inbox?${query}`, { headers: bearer(token) });
   },
   takeChat: (token: string, conversationId: string) =>
@@ -1516,6 +1554,37 @@ export const api = {
       `/api/owner/conversations/${encodeURIComponent(conversationId)}/messages`,
       { headers: bearer(token) },
     ),
+  sendChat: (token: string, conversationId: string, text: string) =>
+    call<InboxItem>(`/api/owner/inbox/${encodeURIComponent(conversationId)}/send`, {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify({ text }),
+    }),
+  departments: (token: string) =>
+    call<Department[]>("/api/owner/departments", { headers: bearer(token) }),
+  addDepartment: (token: string, name: string, keywords: string[]) =>
+    call<Department[]>("/api/owner/departments", {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify({ name, keywords }),
+    }),
+  editDepartment: (token: string, id: string, name: string, keywords: string[]) =>
+    call<Department[]>(`/api/owner/departments/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify({ name, keywords }),
+    }),
+  removeDepartment: (token: string, id: string) =>
+    call<Department[]>(`/api/owner/departments/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: bearer(token),
+    }),
+  setDepartment: (token: string, staffId: string, departmentId: string | null) =>
+    call<Department[]>("/api/owner/departments/members/set", {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify({ staff_id: staffId, department_id: departmentId }),
+    }),
   staffReply: (token: string, conversationId: string, text: string) =>
     call<{ sent: boolean }>(
       `/api/owner/conversations/${encodeURIComponent(conversationId)}/reply`,
@@ -1976,6 +2045,17 @@ export const api = {
       body: JSON.stringify({ lines }),
     }),
   signupOptions: () => call<SignupOptions>("/api/signup"),
+  login: (email: string, password: string, shop?: string) =>
+    call<LoggedIn>("/api/owner/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password, shop }),
+    }),
+  setPassword: (token: string, password: string, current?: string) =>
+    call<{ ok: boolean }>("/api/owner/password", {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify({ password, current }),
+    }),
   signup: (body: SignupIn) =>
     call<SignedUp>("/api/signup", { method: "POST", body: JSON.stringify(body) }),
   store: (token: string) => call<Store>("/api/owner/store", { headers: bearer(token) }),

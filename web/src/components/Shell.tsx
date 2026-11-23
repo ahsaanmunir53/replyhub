@@ -142,7 +142,9 @@ export function Wordmark() {
 export function TopBar({ tone = "light" }: { tone?: "light" | "dark" }) {
   const { t } = useLang();
   const { pathname } = useLocation();
-  const toConsole = readOwnerToken() !== null && pathname !== "/owner";
+  const signedIn = readOwnerToken() !== null;
+  const toConsole = signedIn && !pathname.startsWith("/owner");
+  const toLogin = !signedIn && !COMMERCE && pathname !== "/login";
   return (
     <header className={`topbar topbar-${tone}`}>
       <Wordmark />
@@ -150,6 +152,11 @@ export function TopBar({ tone = "light" }: { tone?: "light" | "dark" }) {
         {toConsole && (
           <Link to="/owner" className="topbar-link">
             {t("console.title")}
+          </Link>
+        )}
+        {toLogin && (
+          <Link to="/login" className="topbar-link">
+            {t("login.submit")}
           </Link>
         )}
         <LangMenu tone={tone} />

@@ -9,6 +9,7 @@ operator can close sign-ups with SIGNUP_OPEN=false.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from typing import Literal
 
@@ -19,9 +20,10 @@ from sqlalchemy import func, select
 from chatfront.core.clock import utcnow
 from chatfront.core.countries import get_pack
 from chatfront.core.errors import AppError, Forbidden
-from chatfront.core.models import Tenant, Tier
+from chatfront.core.models import Staff, Tenant, Tier
 from chatfront.core.phone import hash_phone, normalise_phone
 from chatfront.core.provisioning import NewShop, create_shop, free_slug, owner_of
+from chatfront.owner.login import LOGIN_TTL, hash_password
 from chatfront.owner.routes import ServicesDep
 from chatfront.owner.sessions import console_link, issue
 from chatfront.owner.subscription import PLAN_KEY, Plan
@@ -55,6 +57,8 @@ class SignupIn(BaseModel):
     email: str = Field(min_length=5, max_length=160, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     whatsapp: str = Field(min_length=6, max_length=24)
     lang: Lang = "en"
+    # Lets the owner sign in again from any browser; optional, as it can be set in the console.
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class SignedUp(BaseModel):
@@ -125,7 +129,15 @@ async def sign_up(body: SignupIn, request: Request, services: ServicesDep) -> Si
         stored.country, stored.currency = pack.code, pack.currency
         stored.timezone, stored.default_lang = pack.timezone, body.lang
     owner = await owner_of(services.db, tenant.id)
-    token = issue(owner.id, tenant.id, services.settings.secret_key.get_secret_value())
+    if body.password:
+        hashed = await asyncio.to_thread(hash_password, body.password)
+        async with services.db.system() as session:
+            stored_owner = await session.get(Staff, owner.id)
+            assert stored_owner is not None
+            stored_owner.password_hash = hashed
+    token = issue(
+        owner.id, tenant.id, services.settings.secret_key.get_secret_value(), ttl=LOGIN_TTL
+    )
     return SignedUp(
         slug=slug, token=token, console_url=console_link(services.settings.web_url, token)
     )

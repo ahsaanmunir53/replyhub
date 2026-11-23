@@ -12,7 +12,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
-from sqlalchemy import Date, case, cast, func, select
+from sqlalchemy import Date, case, cast, distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.sql.elements import Cast
@@ -22,13 +22,22 @@ from chatfront.ai.types import Role
 from chatfront.books.ledger import today, zone
 from chatfront.books.models import EntryKind, LedgerEntry, UdhaarAccount
 from chatfront.books.reports import totals
-from chatfront.channels.models import ChannelAccount, Conversation
+from chatfront.channels.models import (
+    ChannelAccount,
+    Conversation,
+    Direction,
+    Handover,
+    HandoverStatus,
+    Message,
+    Party,
+)
 from chatfront.core.clock import utcnow
 from chatfront.core.errors import NotFound
 from chatfront.core.models import Tenant
 from chatfront.delivery.risk import HIGH
 from chatfront.orders.models import Order
 from chatfront.orders.states import OrderStatus
+from chatfront.owner.models import Department
 from chatfront.owner.rights import Can, staff_rights
 from chatfront.owner.routes import ServicesDep, StaffDep
 from chatfront.payments.models import ClaimStatus, Payment, PaymentClaim
@@ -134,8 +143,31 @@ class OrderCostOut(UsageOut):
     placed_at: datetime
 
 
+class ChatDayOut(BaseModel):
+    day: date
+    chats: int  # chats with a customer message that day
+    incoming: int  # customer messages
+    assistant: int  # replies the assistant sent
+    staff: int  # replies people sent from the inbox
+
+
+class ChatsOut(BaseModel):
+    """ReplyHub's own numbers: how much the assistant and the team answered, and where from."""
+
+    chats: int  # chats with a customer message in the period
+    incoming: int
+    assistant: int
+    staff: int
+    handed_over: int  # chats handed to a person in the period
+    waiting: int  # handed over and nobody has them, now
+    channels: dict[str, int]  # chats in the period per channel
+    departments: dict[str, int]  # chats in the period per department
+    daily: list[ChatDayOut]
+
+
 class DashboardOut(BaseModel):
     period: PeriodOut
+    chats: ChatsOut | None = None
     orders: OrdersOut | None
     money: MoneyOut | None
     fraud: FraudOut | None
@@ -143,6 +175,79 @@ class DashboardOut(BaseModel):
     ai: AiOut | None
     daily: list[DayOut] | None
     costs: list[OrderCostOut] | None
+
+
+async def _chats(
+    db: AsyncSession, tenant: Tenant, since: datetime, chart_first: date, last: date
+) -> ChatsOut:
+    """Two grouped queries: messages per day and kind, and chats per channel and department."""
+    day = _local_day(tenant, Message.created_at)
+    by_staff = Message.payload["by"].astext.is_not(None)
+    rows = (
+        await db.execute(
+            select(
+                day,
+                func.count(distinct(Message.conversation_id)).filter(
+                    Message.direction == Direction.IN
+                ),
+                func.count().filter(Message.direction == Direction.IN),
+                func.count().filter(Message.direction != Direction.IN, ~by_staff),
+                func.count().filter(Message.direction != Direction.IN, by_staff),
+            )
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .where(
+                Conversation.party == Party.CUSTOMER,
+                Message.created_at >= _start(tenant, min(chart_first, last)),
+            )
+            .group_by(day)
+        )
+    ).all()
+    per_day = {row[0]: row[1:] for row in rows}
+    daily = []
+    cursor = chart_first
+    while cursor <= last:
+        chats, incoming, assistant, staff = per_day.get(cursor, (0, 0, 0, 0))
+        daily.append(
+            ChatDayOut(day=cursor, chats=chats, incoming=incoming, assistant=assistant, staff=staff)
+        )
+        cursor += timedelta(days=1)
+    in_period = [d for d in daily if _start(tenant, d.day) >= since]
+    spread = (
+        await db.execute(
+            select(ChannelAccount.channel, Department.name, func.count(distinct(Conversation.id)))
+            .select_from(Conversation)
+            .join(ChannelAccount, ChannelAccount.id == Conversation.channel_account_id)
+            .outerjoin(Department, Department.id == Conversation.department_id)
+            .where(
+                Conversation.party == Party.CUSTOMER,
+                Conversation.last_inbound_at >= since,
+            )
+            .group_by(ChannelAccount.channel, Department.name)
+        )
+    ).all()
+    channels: dict[str, int] = {}
+    departments: dict[str, int] = {}
+    for channel, team, count in spread:
+        channels[channel] = channels.get(channel, 0) + count
+        if team:
+            departments[team] = departments.get(team, 0) + count
+    handed = await db.scalar(select(func.count(Handover.id)).where(Handover.created_at >= since))
+    waiting = await db.scalar(
+        select(func.count(Handover.id))
+        .join(Conversation, Conversation.id == Handover.conversation_id)
+        .where(Handover.status == HandoverStatus.OPEN, Conversation.assigned_staff_id.is_(None))
+    )
+    return ChatsOut(
+        chats=sum(channels.values()),
+        incoming=sum(d.incoming for d in in_period),
+        assistant=sum(d.assistant for d in in_period),
+        staff=sum(d.staff for d in in_period),
+        handed_over=handed or 0,
+        waiting=waiting or 0,
+        channels=channels,
+        departments=departments,
+        daily=daily,
+    )
 
 
 def _usage(used: meter.Usage) -> UsageOut:
@@ -395,6 +500,9 @@ async def dashboard(
         placed = orders.placed if orders else 0
         return DashboardOut(
             period=PeriodOut(days=days, start=first, end=last),
+            chats=await _chats(db, tenant, since, chart_first, last)
+            if Can.CHATS in allowed
+            else None,
             orders=orders,
             money=await _money(db, since) if payments else None,
             fraud=await _fraud(db, since) if payments else None,

@@ -21,6 +21,8 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      - key: PUBLIC_CACHE_SECONDS
+        value: "30"
       - key: SECRET_KEY
         generateValue: true
       - key: PHONE_HASH_KEY

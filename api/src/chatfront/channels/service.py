@@ -240,6 +240,10 @@ async def accept(
                 body,
             )
         conversation.last_inbound_at = max(msg.sent_at, conversation.last_inbound_at or msg.sent_at)
+        if conversation.party == Party.CUSTOMER and conversation.department_id is None and body:
+            from chatfront.owner.departments import match
+
+            conversation.department_id = await match(session, body)
         customer.lang = conversation.lang_choice or conversation.lang or customer.lang
         await enqueue(
             session,

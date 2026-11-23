@@ -152,6 +152,7 @@ class Me(BaseModel):
     whatsapp_connected: bool = False  # ReplyHub onboarding: the business's number is in
     channels: list[str] = Field(default_factory=list)  # the connected chat apps
     selling: bool = False  # the assistant takes orders in the chat
+    has_password: bool = False  # False: the console asks to set one, to sign in again later
 
 
 class OwnerVariant(BaseModel):
@@ -220,6 +221,7 @@ async def me(session: StaffDep, services: ServicesDep) -> Me:
         whatsapp_connected=Channel.WHATSAPP in connected,
         channels=sorted(str(c) for c in connected),
         selling=sells(tenant, commerce=services.settings.commerce),
+        has_password=staff.password_hash is not None,
     )
 
 

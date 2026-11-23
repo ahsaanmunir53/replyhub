@@ -14,14 +14,14 @@ from enum import StrEnum
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import Select, func, select
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chatfront.audit.service import Actor, ActorType, record
 from chatfront.channels.base import SERVICE_WINDOW
-from chatfront.channels.handover import start_handover
+from chatfront.channels.handover import reply_as_staff, start_handover
 from chatfront.channels.models import (
     Channel,
     ChannelAccount,
@@ -36,11 +36,13 @@ from chatfront.channels.models import (
 from chatfront.core.clock import utcnow
 from chatfront.core.errors import AppError, Forbidden, NotFound
 from chatfront.core.models import Customer, Staff, Tenant
+from chatfront.owner.models import Department
 from chatfront.owner.rights import Can, rights
 from chatfront.owner.routes import ChatsDep, ServicesDep
 from chatfront.owner.sessions import OwnerSession
 from chatfront.services import Services
 
+HANDOVER = "handover"
 router = APIRouter(prefix="/api/owner/inbox")
 
 PAGE = 50
@@ -76,6 +78,7 @@ class InboxItem(BaseModel):
     assigned: Person | None
     last: LastMessage | None
     window_open: bool  # a reply can still go out without a template
+    department: str | None = None  # the department the chat was routed to
 
 
 class Inbox(BaseModel):
@@ -83,6 +86,7 @@ class Inbox(BaseModel):
     waiting: int  # handed over and nobody has it, across the whole inbox
     people: list[Person]  # who can be given a chat
     can_assign: bool  # may give chats to others (the owner)
+    departments: list[Person] = []  # to show one department at a time
 
 
 class Assign(BaseModel):
@@ -131,6 +135,7 @@ async def _items(
     show: Show = Show.ALL,
     channel: Channel | None = None,
     only: uuid.UUID | None = None,
+    department: uuid.UUID | None = None,
 ) -> list[InboxItem]:
     last = _last_messages().subquery()
     handover = (
@@ -146,12 +151,14 @@ async def _items(
             Staff.name,
             handover.c.id,
             handover.c.summary,
+            Department.name,
             last,
         )
         .join(Customer, Customer.id == Conversation.customer_id)
         .join(ChannelAccount, ChannelAccount.id == Conversation.channel_account_id)
         .outerjoin(Staff, Staff.id == Conversation.assigned_staff_id)
         .outerjoin(handover, handover.c.conversation_id == Conversation.id)
+        .outerjoin(Department, Department.id == Conversation.department_id)
         .outerjoin(last, last.c.conversation_id == Conversation.id)
         .where(Conversation.party == Party.CUSTOMER)
         .order_by(func.coalesce(last.c.created_at, Conversation.created_at).desc())
@@ -165,10 +172,12 @@ async def _items(
         query = query.where(ChannelAccount.channel == channel)
     if only is not None:
         query = query.where(Conversation.id == only)
+    if department is not None:
+        query = query.where(Conversation.department_id == department)
     rows = (await session.execute(query)).all()
     known = await _known_on(session, [row[0].customer_id for row in rows])
     items = []
-    for chat, name, account_channel, assignee, handover_id, summary, *message in rows:
+    for chat, name, account_channel, assignee, handover_id, summary, team, *message in rows:
         _, direction, kind, body, by, at = message
         items.append(
             InboxItem(
@@ -191,6 +200,7 @@ async def _items(
                     at=at,
                 ),
                 window_open=_window_open(account_channel, chat.last_inbound_at),
+                department=team,
             )
         )
     return items
@@ -207,9 +217,16 @@ async def inbox(
     services: ServicesDep,
     show: Annotated[Show, Query()] = Show.ALL,
     channel: Annotated[Channel | None, Query()] = None,
+    department: Annotated[uuid.UUID | None, Query()] = None,
 ) -> Inbox:
     async with services.db.tenant(session.tenant_id) as db:
-        items = await _items(db, session.staff_id, show=show, channel=channel)
+        items = await _items(
+            db, session.staff_id, show=show, channel=channel, department=department
+        )
+        teams = [
+            Person(id=d.id, name=d.name)
+            for d in await db.scalars(select(Department).order_by(Department.name))
+        ]
         waiting = await db.scalar(
             select(func.count(Handover.id))
             .join(Conversation, Conversation.id == Handover.conversation_id)
@@ -225,7 +242,29 @@ async def inbox(
         waiting=waiting or 0,
         people=people,
         can_assign=me is not None and Can.TEAM in rights(me.role),
+        departments=teams,
     )
+
+
+class Send(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+@router.post("/{conversation_id}/send")
+async def send(
+    conversation_id: uuid.UUID, body: Send, session: ChatsDep, services: ServicesDep
+) -> InboxItem:
+    """Reply to any chat from the inbox, whichever channel it came from. A chat the assistant
+    still has is taken first, so the assistant and a person never answer at once."""
+    async with services.db.tenant(session.tenant_id) as db:
+        chat = await db.get(Conversation, conversation_id)
+        if chat is None or chat.party != Party.CUSTOMER:
+            raise NotFound("conversation")
+        mine = chat.status == HANDOVER and chat.assigned_staff_id == session.staff_id
+    if not mine:
+        await _hand_to(services, session, conversation_id, session.staff_id)
+    await reply_as_staff(services, session.tenant_id, conversation_id, session.staff_id, body.text)
+    return await _item(services, session, conversation_id)
 
 
 async def _hand_to(

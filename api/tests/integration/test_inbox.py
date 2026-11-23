@@ -140,3 +140,87 @@ async def test_closed_windows_and_other_channels_show(app: tuple[Client, Service
         "/api/owner/inbox/01900000-0000-7000-8000-000000000000/take", headers=owner
     )
     assert missing.status_code == 404
+
+
+async def test_departments_route_chats_and_the_inbox_replies_to_any_chat(
+    app: tuple[Client, Services],
+) -> None:
+    client, services = app
+    owner = await owner_auth(services)
+    made = await client.post(
+        "/api/owner/departments",
+        json={"name": "Complaints", "keywords": ["broken", "refund", "late delivery"]},
+        headers=owner,
+    )
+    assert made.status_code == 200, made.text
+    team_id = made.json()[0]["id"]
+    await _staff(client, owner, "Ali", "sales")
+    people = (await _inbox(client, owner))["people"]
+    ali = next(p["id"] for p in people if p["name"] == "Ali")
+    joined = await client.put(
+        "/api/owner/departments/members/set",
+        json={"staff_id": ali, "department_id": team_id},
+        headers=owner,
+    )
+    assert joined.json()[0]["members"] == [ali]
+    # A web chat customer complains: the chat lands in Complaints.
+    guest, token = await customer(client)
+    await say(client, services, SHOP, guest, "my suit came broken, I want a refund", token=token)
+    found = await _inbox(client, owner, f"?department={team_id}")
+    assert [i["department"] for i in found["items"]] == ["Complaints"]
+    assert found["departments"] == [{"id": team_id, "name": "Complaints"}]
+    chat = found["items"][0]["conversation_id"]
+    # The owner replies from the inbox while the assistant still has it: taken, then sent.
+    sent = await client.post(
+        f"/api/owner/inbox/{chat}/send",
+        json={"text": "Sorry! A new one goes out today."},
+        headers=owner,
+    )
+    assert sent.status_code == 200, sent.text
+    assert sent.json()["state"] == "person"
+    messages = (await client.get(f"/api/owner/conversations/{chat}/messages", headers=owner)).json()
+    assert any("new one goes out" in (m.get("text") or m.get("body") or "") for m in messages)
+    # Given back and handed over again by the assistant, it goes to Ali in Complaints.
+    async with services.db.system() as session:
+        conversation = await session.get(Conversation, chat)
+        assert conversation is not None
+        conversation.status, conversation.assigned_staff_id = "open", None
+        from chatfront.channels.models import Handover, HandoverStatus
+
+        for h in await session.scalars(select(Handover).where(Handover.conversation_id == chat)):
+            h.status = HandoverStatus.RESOLVED
+        tenant_id = conversation.tenant_id
+    from chatfront.channels.handover import start_handover
+    from chatfront.core.models import Tenant
+
+    async with services.db.system() as session:
+        tenant = await session.get(Tenant, tenant_id)
+    assert tenant is not None
+    await start_handover(
+        services, tenant, chat, reason="asked for a person", requested_by="customer"
+    )
+    async with services.db.system() as session:
+        conversation = await session.get(Conversation, chat)
+    assert conversation is not None
+    assert str(conversation.assigned_staff_id) == ali
+
+
+async def test_the_dashboard_counts_chats_per_day_channel_and_department(
+    app: tuple[Client, Services],
+) -> None:
+    client, services = app
+    owner = await owner_auth(services)
+    await client.post(
+        "/api/owner/departments", json={"name": "Sales", "keywords": ["price"]}, headers=owner
+    )
+    guest, token = await customer(client)
+    await say(client, services, SHOP, guest, "what is the price of the lawn suit?", token=token)
+    board = (await client.get("/api/owner/dashboard?days=7", headers=owner)).json()
+    chats = board["chats"]
+    assert chats["chats"] == 1
+    assert chats["incoming"] >= 1
+    assert chats["assistant"] >= 1
+    assert chats["departments"] == {"Sales": 1}
+    assert sum(chats["channels"].values()) == 1
+    assert len(chats["daily"]) == 7
+    assert chats["daily"][-1]["chats"] == 1

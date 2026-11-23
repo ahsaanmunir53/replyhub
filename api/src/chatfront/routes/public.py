@@ -24,6 +24,7 @@ from chatfront.core.countries import get_pack
 from chatfront.core.errors import NotFound
 from chatfront.core.i18n import t
 from chatfront.core.models import Tenant
+from chatfront.core.ttlcache import TtlCache
 from chatfront.media import service as media_service
 from chatfront.media.models import Media
 from chatfront.offers import seasons
@@ -223,9 +224,27 @@ async def check_official(
     return OfficialCheck(official=True, channel=found.channel, display=found.display)
 
 
+_SHOPS: TtlCache[PublicShop] = TtlCache()
+_PRODUCTS: TtlCache[list[ProductOut]] = TtlCache()
+
+
+def _cache_key(slug: str, request: Request) -> str:
+    return f"{slug}|{request.headers.get('accept-language', '')[:40]}"
+
+
 @router.get("/api/shops/{slug}")
 async def get_shop(slug: str, request: Request, services: ServicesDep) -> PublicShop:
     _limit(services, request)
+    seconds = services.settings.public_cache_seconds
+    cached = _SHOPS.get(_cache_key(slug, request), seconds)
+    if cached is not None:
+        return cached
+    shop = await _shop(slug, services)
+    _SHOPS.put(_cache_key(slug, request), shop, seconds)
+    return shop
+
+
+async def _shop(slug: str, services: Services) -> PublicShop:
     tenant = await shop_by_slug(services, slug)
     profile: dict[str, Any] = tenant.profile or {}
     template = get_template(tenant.template)
@@ -297,6 +316,18 @@ async def _countdowns(services: Services, tenant: Tenant) -> list[Countdown]:
 async def list_products(slug: str, request: Request, services: ServicesDep) -> list[ProductOut]:
     """The shop's products on sale, newest first, with short-lived photo links."""
     _limit(services, request)
+    # Photo links last far longer than the cache, so a cached list never hands out dead links.
+    settings = services.settings
+    seconds = min(settings.public_cache_seconds, settings.signed_url_ttl_seconds // 4)
+    cached = _PRODUCTS.get(_cache_key(slug, request), seconds)
+    if cached is not None:
+        return cached
+    found = await _products(slug, services)
+    _PRODUCTS.put(_cache_key(slug, request), found, seconds)
+    return found
+
+
+async def _products(slug: str, services: Services) -> list[ProductOut]:
     tenant = await shop_by_slug(services, slug)
     async with services.db.tenant(tenant.id) as session:
         items = await load_items(session)

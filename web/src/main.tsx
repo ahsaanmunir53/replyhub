@@ -16,7 +16,9 @@ import { ReviewPage } from "./pages/ReviewPage";
 import { TrackPage } from "./pages/TrackPage";
 import { OwnerPage } from "./pages/OwnerPage";
 import { ShopPage } from "./pages/ShopPage";
+import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
+import { TourPage } from "./pages/TourPage";
 import { StartPage } from "./pages/StartPage";
 import { ServerProvider } from "./server";
 import "./styles.css";
@@ -45,6 +47,8 @@ createRoot(root).render(
           <Routes>
             <Route path="/" element={COMMERCE ? <HomePage /> : <SignupPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/how-it-works" element={<TourPage />} />
             <Route
               path="/s/:slug"
               element={COMMERCE ? <ShopPage /> : <Navigate to="chat" replace />}

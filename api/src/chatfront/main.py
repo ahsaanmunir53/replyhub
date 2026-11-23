@@ -44,7 +44,9 @@ from chatfront.orders.group_routes import router as groups_router
 from chatfront.orders.return_routes import router as returns_router
 from chatfront.orders.waitlist_routes import router as waitlist_router
 from chatfront.owner.dashboard import router as dashboard_router
+from chatfront.owner.departments import router as departments_router
 from chatfront.owner.inbox import router as inbox_router
+from chatfront.owner.login import router as login_router
 from chatfront.owner.plan_routes import router as plan_router
 from chatfront.owner.posts import router as posts_router
 from chatfront.owner.routes import needs_feature
@@ -195,6 +197,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(size_charts_router)
     app.include_router(rules_router)
     app.include_router(plan_router)
+    app.include_router(login_router)
+    app.include_router(departments_router)
     app.include_router(signup_router)
     app.include_router(store_router)
     app.include_router(team_router)

@@ -123,6 +123,10 @@ class Conversation(Base):
     assigned_staff_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("staff.id", ondelete="SET NULL")
     )
+    # The department whose keywords the customer used first; set once.
+    department_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("departments.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = created_at_column()
 
 

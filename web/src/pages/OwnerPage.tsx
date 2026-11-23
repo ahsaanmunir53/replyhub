@@ -29,15 +29,12 @@ import { ConsentsPanel } from "../components/Consents";
 import { CouriersPanel } from "../components/Couriers";
 import { CustomRequestsPanel } from "../components/Custom";
 import { DashboardPanel } from "../components/Dashboard";
+import { DepartmentsPanel } from "../components/Departments";
 import { FraudReportsPanel, FraudReviewPanel } from "../components/Fraud";
 import { ImportsPanel } from "../components/Imports";
 import { InboxPanel } from "../components/Inbox";
 import { OrdersPanel, useOrders } from "../components/Orders";
-import {
-  PaymentReviews,
-  PaymentsPanel,
-  usePayments,
-} from "../components/Payments";
+import { PaymentReviews, PaymentsPanel, usePayments } from "../components/Payments";
 import { AnswersPanel } from "../components/Answers";
 import { OffersPanel } from "../components/Offers";
 import { RefundsPanel, ReturnsPanel } from "../components/Returns";
@@ -57,24 +54,15 @@ import { CustomersPanel } from "../components/Customers";
 import { Approvals, SettingsPanel, useApprovals } from "../components/Shield";
 import { Alerts, StockPanel, useNotices } from "../components/Stock";
 import { ActivityPanel, TeamPanel } from "../components/Team";
-import { Page } from "../components/Shell";
+import { Page, Problem } from "../components/Shell";
 import { languageOf, scriptLang } from "../i18n";
 import type { Key } from "../i18n";
 import { useLang } from "../lang";
 import { formatMoney } from "../money";
-import {
-  clearOwnerToken,
-  readOwnerToken,
-  saveOwnerToken,
-  tokenFromHash,
-} from "../owner";
+import { clearOwnerToken, readOwnerToken, saveOwnerToken, tokenFromHash } from "../owner";
 import { useServer } from "../server";
 
-const SUGGESTIONS = [
-  "console.suggest_1",
-  "console.suggest_2",
-  "console.suggest_3",
-] as const;
+const SUGGESTIONS = ["console.suggest_1", "console.suggest_2", "console.suggest_3"] as const;
 const STATUS: Record<OwnerProduct["status"], Key> = {
   draft: "console.status_draft",
   active: "console.status_active",
@@ -86,11 +74,7 @@ function takeToken(): string | null {
   const fresh = tokenFromHash(window.location.hash);
   if (fresh) {
     saveOwnerToken(fresh);
-    window.history.replaceState(
-      null,
-      "",
-      window.location.pathname + window.location.search,
-    );
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
     return fresh;
   }
   return readOwnerToken();
@@ -109,15 +93,59 @@ function SignedOut({ expired }: { expired: boolean }) {
         )}
         <p className="lede">{t("console.signed_out_body")}</p>
         <div className="console-ways">
-          <Link to="/start" className="button button-saffron">
-            {t("home.make_shop")}
+          <Link to="/login" className="button button-ink">
+            {t("login.submit")}
           </Link>
-          <Link to="/#shops" className="button button-ink">
-            {t("home.demo_shops")}
+          <Link to="/signup" className="button button-saffron">
+            {t("login.make_one")}
           </Link>
         </div>
       </section>
     </Page>
+  );
+}
+
+/** Asks a person who came in by link to set a password, so they can sign in again later. */
+function SetPassword({ token }: { token: string }) {
+  const { t } = useLang();
+  const [password, setPassword] = useState("");
+  const [state, setState] = useState<"idle" | "busy" | "done" | "failed">("idle");
+  if (state === "done") return <p className="pw-box pw-done">{t("pw.saved")}</p>;
+  return (
+    <form
+      className="pw-box"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setState("busy");
+        api.setPassword(token, password).then(
+          () => setState("done"),
+          () => setState("failed"),
+        );
+      }}
+    >
+      <strong>{t("pw.title")}</strong>
+      <p>{t("pw.body")}</p>
+      <div className="pw-row">
+        <input
+          required
+          type="password"
+          minLength={8}
+          maxLength={128}
+          autoComplete="new-password"
+          aria-label={t("login.password")}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="button button-ink button-small"
+          disabled={state === "busy"}
+        >
+          {t("pw.save")}
+        </button>
+      </div>
+      {state === "failed" && <Problem message={t("pw.failed")} />}
+    </form>
   );
 }
 
@@ -137,9 +165,7 @@ function WordingEditor({
   const current = product.translations[lang];
   const [name, setName] = useState(current?.name ?? "");
   const [description, setDescription] = useState(current?.description ?? "");
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">(
-    "idle",
-  );
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
 
   function choose(next: string) {
     setLang(next);
@@ -163,11 +189,7 @@ function WordingEditor({
   const dir = languageOf(lang).dir === "rtl" ? "rtl" : "ltr";
   return (
     <form className="wording" onSubmit={(event) => void save(event)}>
-      <div
-        className="wording-langs"
-        role="radiogroup"
-        aria-label={t("nav.language")}
-      >
+      <div className="wording-langs" role="radiogroup" aria-label={t("nav.language")}>
         {me.languages.map((tag) => (
           <button
             key={tag}
@@ -219,9 +241,7 @@ function WordingEditor({
           {t("console.save")}
         </button>
         {state === "saved" && <span role="status">{t("console.saved")}</span>}
-        {state === "failed" && (
-          <span role="alert">{t("console.save_failed")}</span>
-        )}
+        {state === "failed" && <span role="alert">{t("console.save_failed")}</span>}
       </div>
     </form>
   );
@@ -250,21 +270,16 @@ function ProductRow({
       </div>
       <div className="khata-facts">
         <span className="khata-code">{product.code}</span>
-        <span className={`khata-status status-${product.status}`}>
-          {t(STATUS[product.status])}
-        </span>
+        <span className={`khata-status status-${product.status}`}>{t(STATUS[product.status])}</span>
         {product.floor_price !== null && (
-          <span>
-            {t("console.lowest", { price: money(product.floor_price) })}
-          </span>
+          <span>{t("console.lowest", { price: money(product.floor_price) })}</span>
         )}
       </div>
       <ul className="khata-variants">
         {product.variants.map((variant) => (
           <li key={variant.id}>
             <span dir="auto">
-              {Object.values(variant.options).join(" ") ||
-                t("console.one_kind")}
+              {Object.values(variant.options).join(" ") || t("console.one_kind")}
             </span>
             <span>
               {variant.stock === null
@@ -277,12 +292,7 @@ function ProductRow({
       {me.languages.length > 0 && (
         <details className="khata-wording">
           <summary>{t("console.wording")}</summary>
-          <WordingEditor
-            product={product}
-            me={me}
-            token={token}
-            onSaved={onSaved}
-          />
+          <WordingEditor product={product} me={me} token={token} onSaved={onSaved} />
         </details>
       )}
       {product.status === "active" && (
@@ -310,27 +320,16 @@ function Products({
 }) {
   const { t } = useLang();
   return (
-    <section
-      className="console-products"
-      aria-labelledby="console-products-title"
-    >
+    <section className="console-products" aria-labelledby="console-products-title">
       <h2 id="console-products-title" className="section-title">
         {t("shop.products")}
         {products && <span className="console-count">{products.length}</span>}
       </h2>
       <LowStockList low={low} />
-      {products && products.length === 0 && (
-        <p className="aside">{t("console.no_products")}</p>
-      )}
+      {products && products.length === 0 && <p className="aside">{t("console.no_products")}</p>}
       <ul className="khata" aria-busy={!products}>
         {products?.map((product) => (
-          <ProductRow
-            key={product.id}
-            product={product}
-            me={me}
-            token={token}
-            onSaved={onSaved}
-          />
+          <ProductRow key={product.id} product={product} me={me} token={token} onSaved={onSaved} />
         ))}
       </ul>
     </section>
@@ -400,22 +399,18 @@ function Console({
       show: true,
       children: (
         <>
-          {me.is_demo && can("orders") && (
-            <BusyDayPanel token={token} canStart={can("settings")} />
-          )}
+          {me.is_demo && can("orders") && <BusyDayPanel token={token} canStart={can("settings")} />}
           {!COMMERCE && <SetupPanel me={me} token={token} />}
           {!COMMERCE && !me.is_demo && <PlanPanel token={token} canAsk={can("settings")} />}
-          <Approvals
-            token={token}
-            list={approvals.list}
-            onChange={approvals.refresh}
-          />
-          <Alerts
-            me={me}
-            token={token}
-            list={notices.list}
-            onChange={notices.refresh}
-          />
+          {!COMMERCE && (
+            <p className="tour-link">
+              <Link to="/how-it-works" className="button button-ghost button-small">
+                {t("tour.open")}
+              </Link>
+            </p>
+          )}
+          <Approvals token={token} list={approvals.list} onChange={approvals.refresh} />
+          <Alerts me={me} token={token} list={notices.list} onChange={notices.refresh} />
           <DashboardPanel me={me} token={token} />
         </>
       ),
@@ -437,12 +432,7 @@ function Console({
       label: "side.connections",
       show: !COMMERCE,
       children: (
-        <ConnectionsPanel
-          me={me}
-          token={token}
-          canChange={can("settings")}
-          onChanged={onRefresh}
-        />
+        <ConnectionsPanel me={me} token={token} canChange={can("settings")} onChanged={onRefresh} />
       ),
     },
     {
@@ -457,11 +447,7 @@ function Console({
       show: true,
       children: (
         <>
-          <div
-            className="console-switch"
-            role="tablist"
-            aria-label={t("console.title")}
-          >
+          <div className="console-switch" role="tablist" aria-label={t("console.title")}>
             {(["chat", "products"] as const).map((name) => (
               <button
                 key={name}
@@ -489,17 +475,9 @@ function Console({
               onSignedOut={onSessionEnded}
               onReplies={setReplies}
             />
-            <Products
-              me={me}
-              token={token}
-              products={products}
-              low={books.low}
-              onSaved={saved}
-            />
+            <Products me={me} token={token} products={products} low={books.low} onSaved={saved} />
           </div>
-          {can("catalog") && (
-            <ImportsPanel me={me} token={token} onAdded={saved} />
-          )}
+          {can("catalog") && <ImportsPanel me={me} token={token} onAdded={saved} />}
           {can("catalog") && <SizeChartsPanel token={token} />}
           {can("catalog") && <PriceCheckPanel me={me} token={token} />}
         </>
@@ -512,27 +490,10 @@ function Console({
       children: (
         <>
           {can("orders") && (
-            <OrdersPanel
-              me={me}
-              token={token}
-              orders={orders.orders}
-              onChange={orders.refresh}
-            />
+            <OrdersPanel me={me} token={token} orders={orders.orders} onChange={orders.refresh} />
           )}
-          {can("orders") && (
-            <BookingsPanel
-              me={me}
-              token={token}
-              canSettings={can("settings")}
-            />
-          )}
-          {can("orders") && (
-            <CustomRequestsPanel
-              me={me}
-              token={token}
-              canPrice={can("catalog")}
-            />
-          )}
+          {can("orders") && <BookingsPanel me={me} token={token} canSettings={can("settings")} />}
+          {can("orders") && <CustomRequestsPanel me={me} token={token} canPrice={can("catalog")} />}
           {(can("ship") || can("books")) && (
             <CouriersPanel
               me={me}
@@ -541,9 +502,7 @@ function Console({
               canBooks={can("books")}
             />
           )}
-          {can("orders") && (
-            <ReturnsPanel token={token} canShip={can("ship")} />
-          )}
+          {can("orders") && <ReturnsPanel token={token} canShip={can("ship")} />}
           {can("orders") && <WaitingPanel token={token} />}
         </>
       ),
@@ -554,17 +513,8 @@ function Console({
       show: can("stock"),
       children: (
         <>
-          <StockPanel
-            me={me}
-            token={token}
-            products={products}
-            onChange={stockChanged}
-          />
-          <ShelfCameraPanel
-            token={token}
-            lang={me.lang}
-            onSaved={stockChanged}
-          />
+          <StockPanel me={me} token={token} products={products} onChange={stockChanged} />
+          <ShelfCameraPanel token={token} lang={me.lang} onSaved={stockChanged} />
           <ShelfCountPanel token={token} onSaved={stockChanged} />
           <SuppliersPanel me={me} token={token} />
         </>
@@ -585,21 +535,11 @@ function Console({
             />
           )}
           {can("payments") && (
-            <PaymentsPanel
-              me={me}
-              token={token}
-              data={payments.data}
-              onChange={payments.refresh}
-            />
+            <PaymentsPanel me={me} token={token} data={payments.data} onChange={payments.refresh} />
           )}
           {can("payments") && <RefundsPanel me={me} token={token} />}
           {can("books") && (
-            <BooksPanel
-              me={me}
-              token={token}
-              books={books.books}
-              onChange={books.refresh}
-            />
+            <BooksPanel me={me} token={token} books={books.books} onChange={books.refresh} />
           )}
           {can("books") && (
             <BooksAheadPanel
@@ -619,20 +559,14 @@ function Console({
       children: (
         <>
           {can("chats") && <PublicationsPanel token={token} />}
-          {can("chats") && (
-            <PostsPanel token={token} products={products ?? []} />
-          )}
+          {can("chats") && <PostsPanel token={token} products={products ?? []} />}
           {can("catalog") && <CatalogSyncPanel token={token} />}
           {can("chats") && has("broadcasts") && (
             <BroadcastsPanel me={me} token={token} products={products ?? []} />
           )}
           {can("orders") && <LeadsPanel me={me} token={token} />}
-          {can("settings") && (
-            <OffersPanel me={me} token={token} products={products ?? []} />
-          )}
-          {can("settings") && (
-            <SalesPanel me={me} token={token} products={products ?? []} />
-          )}
+          {can("settings") && <OffersPanel me={me} token={token} products={products ?? []} />}
+          {can("settings") && <SalesPanel me={me} token={token} products={products ?? []} />}
         </>
       ),
     },
@@ -674,6 +608,7 @@ function Console({
             </p>
           )}
           {can("team") && has("team") && <TeamPanel token={token} onSignedOut={onSignOut} />}
+          {can("team") && has("team") && !COMMERCE && <DepartmentsPanel token={token} />}
           {(can("catalog") || can("orders") || can("team")) && (
             <NetworkCommercePanel
               me={me}
@@ -688,9 +623,7 @@ function Console({
           {can("settings") && <AnswersPanel token={token} />}
           <PhoneAlerts token={token} />
           {can("settings") && <SettingsPanel token={token} />}
-          {can("audit") && (
-            <ConsentsPanel token={token} canChange={can("settings")} />
-          )}
+          {can("audit") && <ConsentsPanel token={token} canChange={can("settings")} />}
           {can("audit") && <ActivityPanel token={token} />}
         </>
       ),
@@ -703,13 +636,29 @@ function Console({
     <Page wide>
       <div className="admin">
         <aside className="admin-side">
-          <p
-            className="admin-side-shop"
-            lang={scriptLang(me.shop_name)}
-            dir="auto"
-          >
+          <p className="admin-side-shop" lang={scriptLang(me.shop_name)} dir="auto">
             {me.shop_name}
           </p>
+          <details className="admin-mobile">
+            <summary>
+              <span>{t(active.label)}</span>
+              <span className="admin-mobile-all">{t("side.all_sections")}</span>
+            </summary>
+            <ul className="admin-mobile-grid">
+              {shown.map((section) => (
+                <li key={section.id}>
+                  <Link
+                    to={`/owner/${section.id}`}
+                    aria-current={active.id === section.id ? "page" : undefined}
+                    onClick={(e) => e.currentTarget.closest("details")?.removeAttribute("open")}
+                  >
+                    <strong>{t(section.label)}</strong>
+                    <span>{t(`help.${section.id}` as Key)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
           <nav aria-label={t("side.menu")}>
             {shown.map((section) => (
               <Link
@@ -726,11 +675,7 @@ function Console({
           <header className="console-head">
             <div>
               <p className="console-kicker">{t("console.title")}</p>
-              <h1
-                className="console-shop"
-                lang={scriptLang(me.shop_name)}
-                dir="auto"
-              >
+              <h1 className="console-shop" lang={scriptLang(me.shop_name)} dir="auto">
                 {me.shop_name}
               </h1>
             </div>
@@ -743,9 +688,8 @@ function Console({
               </button>
             </div>
           </header>
-          {me.is_demo && (
-            <p className="console-demo">{t("console.demo_note")}</p>
-          )}
+          {me.is_demo && <p className="console-demo">{t("console.demo_note")}</p>}
+          {!me.is_demo && me.has_password === false && <SetPassword token={token} />}
           <section key={active.id} id={`sec-${active.id}`} className="admin-section">
             <header className="page-head">
               <h2>{t(active.label)}</h2>
@@ -780,8 +724,7 @@ export function OwnerPage() {
     api.me(token).then(
       (info) => current && setMe(info),
       (error: unknown) => {
-        if (current && error instanceof ApiError && error.status === 401)
-          sessionEnded();
+        if (current && error instanceof ApiError && error.status === 401) sessionEnded();
       },
     );
     return () => {
