@@ -165,7 +165,20 @@ def _tokens(text: str, table: _Table, suffixes: dict[str, Decimal], decimal: str
                     tokens.append(_Token("other"))
             continue
         tokens.extend(_word_tokens(match.group("word"), table, suffixes))
-    return _drop_lonely_ambiguous(tokens)
+    return _drop_lonely_ambiguous(_short_scales(tokens))
+
+
+def _short_scales(tokens: list[_Token]) -> list[_Token]:
+    """A one- or two-letter scale ('5 k', '2 l') counts after a number, never on its own."""
+    numeric = {"digits", "units", "doubles", "fractions"}
+    kept: list[_Token] = []
+    for token in tokens:
+        if token.kind == "scalesshort":
+            after_number = bool(kept) and kept[-1].kind in numeric
+            kept.append(_Token("scales" if after_number else "other", token.value))
+        else:
+            kept.append(token)
+    return kept
 
 
 def _word_tokens(raw: str, table: _Table, suffixes: dict[str, Decimal]) -> list[_Token]:
@@ -177,7 +190,8 @@ def _word_tokens(raw: str, table: _Table, suffixes: dict[str, Decimal]) -> list[
         ambiguous = "ambiguous" if word in table.ambiguous else ""
         return [_Token(kind + ambiguous, table.value(word))]
     if word in suffixes:
-        return [_Token("scales", suffixes[word])]
+        # 'k', 'l', 'm' alone are letters ('size M, L'); they count only after a number.
+        return [_Token("scalesshort" if len(word) <= 2 else "scales", suffixes[word])]
     for joiner in table.joiners:  # Arabic writes 'and' joined on: 'وخمسمية'
         rest = word.removeprefix(joiner)
         if rest != word and (kind := table.kind(rest)):
