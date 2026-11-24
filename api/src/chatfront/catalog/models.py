@@ -48,6 +48,8 @@ class Product(Base):
     attributes: Mapped[dict[str, Any]] = mapped_column(default=dict)  # template product fields
     price: Mapped[int] = mapped_column(BigInteger)  # minor units of the tenant's currency
     floor_price: Mapped[int | None] = mapped_column(BigInteger)  # lowest the agent may agree to
+    # What one unit cost the shop, as the owner says (ReplyHub); batches, when kept, win.
+    unit_cost: Mapped[int | None] = mapped_column(BigInteger)
     low_stock_limit: Mapped[int | None]  # alert at or below this; None: the shop's default
     # Pre-order (feature 16): sold before it arrives, shipping from this day; at most this
     # many pieces waiting at once (None: no limit).

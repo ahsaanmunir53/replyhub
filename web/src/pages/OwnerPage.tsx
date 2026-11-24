@@ -30,6 +30,7 @@ import { CouriersPanel } from "../components/Couriers";
 import { CustomRequestsPanel } from "../components/Custom";
 import { DashboardPanel } from "../components/Dashboard";
 import { DepartmentsPanel } from "../components/Departments";
+import { MoneyGuardianPanel } from "../components/MoneyGuardian";
 import { PhoneOrderPanel } from "../components/PhoneOrder";
 import { AddProductPanel } from "../components/AddProduct";
 import { FraudReportsPanel, FraudReviewPanel } from "../components/Fraud";
@@ -530,6 +531,12 @@ function Console({
           <SuppliersPanel me={me} token={token} />
         </>
       ),
+    },
+    {
+      id: "guardian",
+      label: "side.guardian",
+      show: !COMMERCE && can("books"),
+      children: <MoneyGuardianPanel me={me} token={token} />,
     },
     {
       id: "money",

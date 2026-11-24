@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter
 from fastapi.responses import Response
@@ -110,9 +110,21 @@ class ReceivedOut(BaseModel):
     refund: int
 
 
+class Inspected(BaseModel):
+    inspection: Literal["ok", "damaged"] = "ok"
+
+
 @router.post("/{return_id}/received")
-async def received(return_id: uuid.UUID, session: ShipDep, services: ServicesDep) -> ReceivedOut:
-    done = await returns.receive(services, session.tenant_id, return_id, session.staff_id)
+async def received(
+    return_id: uuid.UUID,
+    session: ShipDep,
+    services: ServicesDep,
+    body: Inspected | None = None,
+) -> ReceivedOut:
+    """The parcel is back and checked: fit to sell goes back in stock, damaged is written off."""
+    done = await returns.receive(
+        services, session.tenant_id, return_id, session.staff_id, (body or Inspected()).inspection
+    )
     return ReceivedOut(code=done.code, refund=done.refund)
 
 

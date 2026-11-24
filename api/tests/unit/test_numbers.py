@@ -1,5 +1,3 @@
-
-
 def test_a_lone_letter_is_not_a_lakh_or_a_million() -> None:
     """'Size S, M, L or XL?' has no numbers in it; '5 k' and '2 lakh' still do."""
     from chatfront.shield.answer_check import Facts, unsupported

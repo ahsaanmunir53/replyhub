@@ -7980,3 +7980,84 @@ button {
   background: #1f6fd1;
   color: #fff;
 }
+
+/* --- Money Guardian ------------------------------------------------------------------- */
+.mg-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0;
+}
+
+.mg-tiles small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.mg-alerts {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.mg-alert {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid var(--c1);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.mg-alert.is-high {
+  border-inline-start-color: #c0392b;
+}
+
+.mg-alert.is-medium {
+  border-inline-start-color: var(--c3);
+}
+
+.mg-uploads,
+.mg-courier-upload,
+.mg-case-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.mg-courier-upload input,
+.mg-recover {
+  min-height: 36px;
+  max-width: 180px;
+}
+
+.mg-file {
+  cursor: pointer;
+}
+
+.mg-settings {
+  margin-top: 14px;
+}
+
+.mg-timeline {
+  margin: 6px 0;
+  padding-inline-start: 18px;
+  font-size: 0.85rem;
+}
+
+.mg-complaint {
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.mg-city {
+  display: inline-grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}

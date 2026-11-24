@@ -73,6 +73,9 @@ class Order(Base):
     # code found (feature 34): [{"code": ..., "points": ...}].
     risk_score: Mapped[int] = mapped_column(default=0, server_default="0")
     risk_reasons: Mapped[list[Any]] = mapped_column(default=list, server_default="[]")
+    # Costs of this order beyond goods and courier, entered by the owner: packaging, ads,
+    # payment charges, in minor units. Missing keys fall back to the shop's usual costs.
+    costs: Mapped[dict[str, Any] | None]
     placed_at: Mapped[datetime | None]
     closed_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = created_at_column()
@@ -171,6 +174,8 @@ class ReturnRequest(Base):
     )
     decided_at: Mapped[datetime | None]
     received_at: Mapped[datetime | None]
+    inspection: Mapped[str | None] = mapped_column(String(10))  # ok or damaged, once checked
+    loss: Mapped[int | None] = mapped_column(BigInteger)  # what the return cost the shop
     created_at: Mapped[datetime] = created_at_column()
 
 

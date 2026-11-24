@@ -34,6 +34,7 @@ from chatfront.crm.broadcast_routes import router as broadcasts_router
 from chatfront.crm.routes import router as crm_router
 from chatfront.delivery.courier_routes import router as couriers_router
 from chatfront.delivery.routes import router as delivery_router
+from chatfront.guardian.routes import router as guardian_router
 from chatfront.insights.routes import router as insights_router
 from chatfront.mcp.routes import router as mcp_router
 from chatfront.network.routes import router as network_router
@@ -203,6 +204,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(departments_router)
     app.include_router(phone_orders_router)
     app.include_router(product_form_router)
+    app.include_router(guardian_router)
     app.include_router(signup_router)
     app.include_router(store_router)
     app.include_router(team_router)

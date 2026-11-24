@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { api } from "../api";
 import { useLang } from "../lang";
 
-const EMPTY = { name: "", price: "", stock: "", option: "", values: "" };
+const EMPTY = { name: "", price: "", cost: "", stock: "", option: "", values: "" };
 
 export function AddProductPanel({ token, onAdded }: { token: string; onAdded: () => void }) {
   const { t } = useLang();
@@ -23,6 +23,7 @@ export function AddProductPanel({ token, onAdded }: { token: string; onAdded: ()
       .addProduct(token, {
         name: form.name,
         price: form.price,
+        unit_cost: form.cost === "" ? null : form.cost,
         stock: form.stock === "" ? null : Number(form.stock),
         option: form.option,
         values: form.values
@@ -67,6 +68,15 @@ export function AddProductPanel({ token, onAdded }: { token: string; onAdded: ()
             pattern="[0-9]+([.][0-9]{1,2})?"
             value={form.price}
             onChange={(e) => set({ price: e.target.value })}
+          />
+        </label>
+        <label>
+          {t("addp.cost")}
+          <input
+            inputMode="decimal"
+            pattern="[0-9]+([.][0-9]{1,2})?"
+            value={form.cost}
+            onChange={(e) => set({ cost: e.target.value })}
           />
         </label>
         <label>

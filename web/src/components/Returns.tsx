@@ -311,6 +311,14 @@ function ReturnRow({
               >
                 {t("console.return_received")}
               </button>
+              <button
+                type="button"
+                className="action"
+                disabled={busy}
+                onClick={() => void run(() => api.returnReceived(token, item.id, "damaged"))}
+              >
+                {t("mg.return_damaged")}
+              </button>
             </>
           )}
         </div>

@@ -53,6 +53,7 @@ from chatfront.core.languages import load_registry
 from chatfront.core.models import Customer
 from chatfront.delivery import pins
 from chatfront.delivery.risk import assess
+from chatfront.guardian import verify
 from chatfront.modules.registry import enabled_modules
 from chatfront.offers import seasons
 from chatfront.orders import browse, custom, live_claims
@@ -180,9 +181,13 @@ class OrderAgent:
         self.services = services
 
     async def respond(self, turn: Turn) -> list[Outbound]:
+        tapped = (turn.message.payload or {}).get("button_id")
+        # A delivery-attempt answer is recorded whoever has the chat (Money Guardian).
+        checked = await verify.answer(self.services, turn, tapped)
+        if checked is not None:
+            return checked
         if turn.conversation.status == HANDOVER:
             return []  # a person has this chat; their replies go out from the console
-        tapped = (turn.message.payload or {}).get("button_id")
         offers = consent.answer_of(tapped)
         if offers is None and turn.message.kind == Kind.TEXT:
             offers = consent.said(turn.message.body)

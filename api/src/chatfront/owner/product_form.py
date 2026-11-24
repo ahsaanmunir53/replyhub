@@ -26,6 +26,7 @@ CatalogDep = Annotated[OwnerSession, needs(Can.CATALOG)]
 class ProductForm(BaseModel):
     name: str = Field(min_length=2, max_length=160)
     price: Decimal = Field(gt=0, le=Decimal("100000000"))
+    unit_cost: Decimal | None = Field(default=None, ge=0, le=Decimal("100000000"))
     description: str = Field(default="", max_length=1000)
     stock: int | None = Field(default=None, ge=0, le=100000)
     # One option, such as colour or size, with its values: "Colour" and ["Blue", "Peach"].
@@ -64,4 +65,6 @@ async def add_from_form(body: ProductForm, session: CatalogDep, services: Servic
             ),
             Actor(ActorType.STAFF, str(session.staff_id)),
         )
+        if body.unit_cost is not None:
+            item.product.unit_cost = to_minor(body.unit_cost, digits)
     return Added(code=item.product.code, name=item.product.name)

@@ -1144,6 +1144,87 @@ export type Batch = {
 export type DiscardReason = "expired" | "damaged" | "lost";
 export type DashboardDays = 1 | 7 | 30;
 export type Usage = { calls: number; failed: number; tokens: number; cost_millipaisa: number };
+export type GuardianCase = {
+  id: string;
+  order: string;
+  kind: string;
+  status: string;
+  courier: string;
+  at_stake: number;
+  recovered: number;
+  reference: string;
+  opened_by: string;
+  timeline: { at: string; by: string; text: string }[];
+};
+export type Guardian = {
+  days: number;
+  summary: {
+    unpaid: number;
+    unproven: number;
+    banked: number;
+    at_risk: number;
+    recovered: number;
+    unreconciled: number;
+    net_profit: number;
+    profit_orders: number;
+    costs_missing: number;
+    new_cases: number;
+  };
+  alerts: ({ key: string; level: string } & Record<string, string | number>)[];
+  cod: {
+    code: string;
+    courier: string;
+    city: string;
+    expected: number;
+    reported: number;
+    banked: number;
+    days: number;
+    overdue: boolean;
+    state: string;
+    unpaid: number;
+  }[];
+  profits: {
+    code: string;
+    status: string;
+    revenue: number;
+    goods: number | null;
+    courier: number | null;
+    returned: number;
+    packaging: number;
+    ads: number;
+    payment: number;
+    net: number;
+    unknown: string[];
+  }[];
+  cases: GuardianCase[];
+  couriers: {
+    courier: string;
+    sent: number;
+    delivered_pct: number | null;
+    returned_pct: number | null;
+    first_try_pct: number | null;
+    denied: number;
+    days_to_deliver: number | null;
+    days_to_pay: number | null;
+    unpaid: number;
+  }[];
+  watch: {
+    customer_id: string;
+    name: string;
+    delivered: number;
+    returned: number;
+    cancelled: number;
+  }[];
+  payouts: {
+    name: string;
+    courier: string;
+    rows: number;
+    paid_out: number;
+    banked: boolean;
+    at: string;
+  }[];
+  settings: Record<string, unknown>;
+};
 export type Department = {
   id: string;
   name: string;
@@ -1537,7 +1618,14 @@ export const api = {
     }),
   addProduct: (
     token: string,
-    body: { name: string; price: string; stock: number | null; option: string; values: string[] },
+    body: {
+      name: string;
+      price: string;
+      unit_cost: string | null;
+      stock: number | null;
+      option: string;
+      values: string[];
+    },
   ) =>
     call<{ code: string; name: string }>("/api/owner/products/form", {
       method: "POST",
@@ -1828,11 +1916,51 @@ export const api = {
       method: "DELETE",
       headers: bearer(token),
     }),
-  returnReceived: (token: string, returnId: string) =>
+  returnReceived: (token: string, returnId: string, inspection: "ok" | "damaged" = "ok") =>
     call<{ code: string; refund: number }>(
       `/api/owner/returns/${encodeURIComponent(returnId)}/received`,
-      { method: "POST", headers: bearer(token) },
+      { method: "POST", headers: bearer(token), body: JSON.stringify({ inspection }) },
     ),
+  guardian: (token: string, days: number, city: string) =>
+    call<Guardian>(`/api/owner/guardian?days=${days}&city=${encodeURIComponent(city)}`, {
+      headers: bearer(token),
+    }),
+  guardianBank: (token: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return call<{ rows: number; credits: number; new: number; proved: string[] }>(
+      "/api/owner/guardian/bank",
+      { method: "POST", headers: bearer(token), body: form },
+    );
+  },
+  guardianSettings: (token: string, body: Record<string, string | number>) =>
+    call<Record<string, unknown>>("/api/owner/guardian/settings", {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify(body),
+    }),
+  guardianAttempt: (token: string, code: string, note: string) =>
+    call<{ asked: boolean }>(`/api/owner/guardian/orders/${encodeURIComponent(code)}/attempt`, {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify({ note }),
+    }),
+  guardianCase: (token: string, id: string, body: Record<string, string>) =>
+    call<GuardianCase>(`/api/owner/guardian/cases/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: bearer(token),
+      body: JSON.stringify(body),
+    }),
+  guardianNewCase: (token: string, body: Record<string, string>) =>
+    call<GuardianCase>("/api/owner/guardian/cases", {
+      method: "POST",
+      headers: bearer(token),
+      body: JSON.stringify(body),
+    }),
+  guardianComplaint: (token: string, id: string) =>
+    call<{ text: string }>(`/api/owner/guardian/cases/${encodeURIComponent(id)}/complaint`, {
+      headers: bearer(token),
+    }),
   track: (code: string) => call<Parcel>(`/api/track/${encodeURIComponent(code)}`),
   receipt: (code: string) => call<ReceiptCheck>(`/api/receipts/${encodeURIComponent(code)}`),
   resumeHandover: (token: string, handoverId: string) =>
@@ -2201,9 +2329,10 @@ export const api = {
     ),
   settlements: (token: string) =>
     call<Settlements>("/api/owner/settlements", { headers: bearer(token) }),
-  uploadSettlement: (token: string, file: File) => {
+  uploadSettlement: (token: string, file: File, courier = "") => {
     const form = new FormData();
     form.append("file", file);
+    if (courier) form.append("courier", courier);
     return call<SettlementReport>("/api/owner/settlements", {
       method: "POST",
       headers: bearer(token),

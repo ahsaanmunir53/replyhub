@@ -43,6 +43,12 @@ from chatfront.delivery.models import (
     PackingCheck,
     Shipment,
 )
+from chatfront.guardian.models import (
+    BankReceipt,
+    CourierCase,
+    CourierPayout,
+    ShipmentEvent,
+)
 from chatfront.insights.models import CoachNote
 from chatfront.jobs.models import CronRun, Job
 from chatfront.media.models import Media
@@ -66,7 +72,7 @@ from chatfront.orders.models import (
     ReturnRequest,
     WaitlistEntry,
 )
-from chatfront.owner.models import AssistantUsage, PendingAction
+from chatfront.owner.models import AssistantUsage, Department, PendingAction
 from chatfront.payments.models import (
     Payment,
     PaymentClaim,
@@ -97,6 +103,7 @@ __all__ = [
     "AssistantUsage",
     "AuditEntry",
     "B2BOrder",
+    "BankReceipt",
     "Base",
     "BatchAllocation",
     "Branch",
@@ -113,12 +120,15 @@ __all__ = [
     "Coupon",
     "CouponUse",
     "CourierAccount",
+    "CourierCase",
+    "CourierPayout",
     "CreditPassport",
     "CronRun",
     "CustomRequest",
     "Customer",
     "CustomerIdentity",
     "DeliveryProof",
+    "Department",
     "FlashSale",
     "FraudListEntry",
     "FraudReport",
@@ -154,6 +164,7 @@ __all__ = [
     "SavedAnswer",
     "ScamReport",
     "Shipment",
+    "ShipmentEvent",
     "SimChat",
     "SimRun",
     "SocialPost",

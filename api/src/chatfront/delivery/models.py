@@ -100,6 +100,9 @@ class CodSettlement(Base):
     charges: Mapped[int | None] = mapped_column(BigInteger)
     paid: Mapped[int | None] = mapped_column(BigInteger)
     short: Mapped[int] = mapped_column(BigInteger, default=0)
+    payout_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("courier_payouts.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = created_at_column()
 
 

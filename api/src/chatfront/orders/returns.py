@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from chatfront.ai.tools import Tool
 from chatfront.audit.service import Actor, ActorType, record
 from chatfront.catalog.models import Product, StockReason, Variant
+from chatfront.catalog.service import move_stock
 from chatfront.channels.language import chat_language
 from chatfront.channels.models import Direction, Message
 from chatfront.channels.notify import send_to
@@ -506,10 +507,39 @@ async def _back_in_stock(
     return value
 
 
+async def _return_loss(
+    session: AsyncSession, order: Order, request: ReturnRequest, actor: Actor
+) -> int:
+    """The courier's charges for the parcel both ways, and a damaged piece's cost, which also
+    leaves the stock again."""
+    shipment = await session.scalar(select(Shipment).where(Shipment.order_id == order.id))
+    loss = ((shipment.courier_charge or 0) + (shipment.return_charge or 0)) if shipment else 0
+    if request.inspection != "damaged":
+        return loss
+    items = {str(item.id): item for item in await orders.lines(session, order)}
+    ref = ("return", str(request.id))
+    for line in request.lines:
+        item = items.get(line["item"])
+        variant = await session.get(Variant, item.variant_id) if item else None
+        if item is None or variant is None:
+            continue
+        quantity = int(line["quantity"])
+        await move_stock(session, variant, -quantity, StockReason.WRITE_OFF, actor, ref=ref)
+        product = await session.get(Product, variant.product_id)
+        loss += (product.unit_cost or 0) * quantity if product else 0
+    return loss
+
+
 async def receive(
-    services: Services, tenant_id: uuid.UUID, return_id: uuid.UUID, staff_id: uuid.UUID
+    services: Services,
+    tenant_id: uuid.UUID,
+    return_id: uuid.UUID,
+    staff_id: uuid.UUID,
+    inspection: str = "ok",
 ) -> Received:
-    """The owner has the parcel: stock comes back, and a return's money becomes owed."""
+    """The owner has the parcel and checked it: stock comes back only if it is fit to sell (a
+    damaged piece is written off), a return's money becomes owed, and what the return cost the
+    shop is kept: the courier both ways, and the goods when damaged (Money Guardian)."""
     async with services.db.tenant(tenant_id) as session:
         tenant = await session.get(Tenant, tenant_id)
         request = await session.get(ReturnRequest, return_id, with_for_update=True)
@@ -520,6 +550,8 @@ async def receive(
             raise AppError("return_not_approved", "Approve this return first", status_code=409)
         actor = Actor(ActorType.STAFF, str(staff_id))
         value = await _back_in_stock(session, order, request, actor)
+        request.inspection = "damaged" if inspection == "damaged" else "ok"
+        request.loss = await _return_loss(session, order, request, actor)
         request.status, request.received_at = ReturnStatus.RECEIVED, utcnow()
         refund = None
         if request.kind == ReturnKind.RETURN:

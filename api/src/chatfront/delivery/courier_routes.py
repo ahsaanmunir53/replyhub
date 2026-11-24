@@ -9,7 +9,7 @@ from dataclasses import asdict
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, Form, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -20,6 +20,8 @@ from chatfront.core.models import Tenant
 from chatfront.delivery import courier_service, proof, settlements, shipping
 from chatfront.delivery.couriers import Stage
 from chatfront.delivery.models import CodSettlement, CourierAccount, DeliveryProof
+from chatfront.guardian import bank
+from chatfront.guardian.models import CourierPayout
 from chatfront.jobs.queue import enqueue
 from chatfront.media import service as media_service
 from chatfront.media.models import Media, MediaKind
@@ -142,7 +144,10 @@ async def book_parcel(
 
 @router.post("/api/owner/settlements")
 async def upload_settlement(
-    services: ServicesDep, session: BooksDep, file: Annotated[UploadFile, File()]
+    services: ServicesDep,
+    session: BooksDep,
+    file: Annotated[UploadFile, File()],
+    courier: Annotated[str, Form(max_length=60)] = "",
 ) -> ReportOut:
     """The courier's sheet: its money matched to the orders, and the parcels it says were
     delivered or came back moved on."""
@@ -151,7 +156,17 @@ async def upload_settlement(
         tenant = await db.get(Tenant, session.tenant_id)
         assert tenant is not None
         rows = settlements.read(data, get_pack(tenant.country).minor_digits)
-        report, moves = await settlements.settle(db, session.tenant_id, rows, "sheet")
+        # The sheet as one payout, so a bank credit of its total can prove it (Money Guardian).
+        payout = CourierPayout(
+            tenant_id=session.tenant_id, courier=courier.strip(), name=(file.filename or "")[:120]
+        )
+        db.add(payout)
+        await db.flush()
+        report, moves = await settlements.settle(
+            db, session.tenant_id, rows, "sheet", payout_id=payout.id
+        )
+        payout.rows, payout.paid_out = report.rows, report.paid_out
+        await bank.match(db)
         actor = Actor(ActorType.STAFF, str(session.staff_id))
         await record(
             db,

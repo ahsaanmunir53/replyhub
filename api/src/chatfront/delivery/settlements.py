@@ -150,7 +150,11 @@ def short_by(shipment: Shipment, row: Row) -> int:
 
 
 async def settle(
-    session: AsyncSession, tenant_id: uuid.UUID, rows: list[Row], source: str
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    rows: list[Row],
+    source: str,
+    payout_id: uuid.UUID | None = None,
 ) -> tuple[Report, list[tuple[str, Stage]]]:
     """Keep each matched row's money; the moves the sheet asks for come back for the caller,
     which makes them as the owner would."""
@@ -190,6 +194,7 @@ async def settle(
                 charges=row.charges,
                 paid=row.net,
                 short=short,
+                payout_id=payout_id,
             )
         )
     await session.flush()
